@@ -357,11 +357,14 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 .m-date-label { font-size:11px; color:var(--text-hint); text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
 .m-plan-val { font-size:11px; color:var(--text-hint); }
 .m-fact-btn {
-  padding:12px 8px; border:1.5px dashed var(--border-med); background:var(--surface2);
-  border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; color:var(--text-sec);
-  min-height:46px; transition:all .12s; font-family:inherit;
+  width:100%;
+  padding:13px 4px; border:1.5px dashed var(--border-med); background:var(--surface2);
+  border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; color:var(--text-sec);
+  min-height:48px; transition:all .12s; font-family:inherit;
+  white-space:nowrap; overflow:visible; text-overflow:clip;
+  display:flex; align-items:center; justify-content:center;
 }
-.m-fact-btn.filled { background:var(--green-bg); color:var(--green); border:1.5px solid #22c55e; }
+.m-fact-btn.filled { background:var(--green-bg); color:var(--green); border:1.5px solid #22c55e; font-size:15px; }
 .m-fact-btn:active { transform:scale(.97); }
 
 @media (max-width:640px) {
@@ -435,7 +438,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+let screen = 'picker'; // 'picker' | 'area' — где мы сейчас
+
 function renderPicker() {
+  screen = 'picker';
+  mobileUnit = null;
+  currentTab = null;
   document.getElementById('master-bar').style.display = 'none';
   const tiles = Object.keys(TAB_SHEETS).map(key => {
     const label = AREA_LABELS[key] || key;
@@ -452,10 +460,11 @@ function renderPicker() {
 }
 
 function openArea(area) {
+  screen = 'area';
   currentTab = area;
   currentProj[area] = currentProj[area] || 't8';
   document.getElementById('master-bar').style.display = 'block';
-  document.getElementById('master-area-name').textContent = '✓ ' + (AREA_LABELS[area] || area);
+  document.getElementById('master-area-name').textContent = AREA_LABELS[area] || area;
   // грузим участок
   if (!summaryData) { loadSummaryThenArea(area); }
   else renderTab();
@@ -467,6 +476,8 @@ async function loadSummaryThenArea(area) {
     const r = await fetch(GAS + '?action=summary&_=' + Date.now());
     summaryData = await r.json();
   } catch(e) { summaryData = { t8:{areas:{}}, s2:{areas:{}} }; }
+  // Если за время загрузки пользователь вернулся на picker — не рисуем участок
+  if (screen !== 'area') return;
   renderTab();
 }
 
@@ -574,15 +585,28 @@ function renderMobileOps(detail, unit) {
 }
 
 function renderMobileDates(d, se, pf, sheet, sr, unit) {
+  // Нормализуем значение факта к единому виду:
+  // - дата (22.05.2026) → показываем дату
+  // - "+" или "✓" → показываем "✓"
+  // - пусто → "отметить"
+  const normFact = (v) => {
+    if (v === null || v === undefined) return '';
+    // Убираем пробелы, неразрывные пробелы, переносы — всё что делает значение "грязным"
+    const s = String(v).replace(/[\s\u00a0\u200b]+/g, ' ').trim();
+    if (s === '') return '';
+    if (s === '+' || s === '✓') return '✓';
+    return s;
+  };
   // Мобильная пара план/факт. Факт — крупная зелёная кнопка (тап = редактировать).
   const factBtn = (field, val, planVal, label) => {
-    const has = !!val;
+    const shown = normFact(val);
+    const has = !!shown;
     return `<div class="m-date-col">
       <div class="m-date-label">${label}</div>
       <div class="m-plan-val">${planVal ? 'план: '+esc(planVal) : '—'}</div>
       <button class="m-fact-btn ${has?'filled':''}"
         data-sheet="${esc(sheet)}" data-row="${sr}" data-unit="${esc(unit)}" data-field="${field}" data-current="${esc(val||'')}"
-        onclick="startFactEdit(this)">${has ? esc(val) : 'отметить'}</button>
+        onclick="startFactEdit(this)">${has ? esc(shown) : 'отметить'}</button>
     </div>`;
   };
 
@@ -676,18 +700,23 @@ async function loadDetail(tab) {
     prefetchOtherProject(tab, proj);
     return;
   }
-  document.getElementById('content').innerHTML =
-    renderBigLoader('Загружаем участок', sheetName);
+  // Лоадер показываем только если мы реально на экране участка
+  if (screen === 'area') {
+    document.getElementById('content').innerHTML =
+      renderBigLoader('Загружаем участок', sheetName);
+  }
   try {
     const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(sheetName) + '&_=' + Date.now());
     const data = await r.json();
     detailCache[sheetName] = data;
-    renderTab();
+    renderTab(); // внутри есть защита по screen
     setMeta('ok', summaryData && summaryData.updated);
     prefetchOtherProject(tab, proj);
   } catch(e) {
-    document.getElementById('content').innerHTML =
-      `<div class="state-msg">Ошибка: ${e.message}</div>`;
+    if (screen === 'area') {
+      document.getElementById('content').innerHTML =
+        `<div class="state-msg">Ошибка: ${e.message}</div>`;
+    }
     setMeta('error');
   }
 }
@@ -712,9 +741,11 @@ async function prefetchOtherProject(tab, activeProj) {
 }
 
 function renderTab() {
+  // Защита: если пользователь на экране выбора участка — ничего не рисуем поверх
+  if (screen !== 'area' || !currentTab || !TAB_SHEETS[currentTab]) return;
   const el = document.getElementById('content');
-  // В мастер-режиме currentTab всегда участок. На узком экране — мобильный поток.
-  if (currentTab && TAB_SHEETS[currentTab] && isMobile()) {
+  // На узком экране — мобильный поток.
+  if (isMobile()) {
     renderMobile();
     return;
   }

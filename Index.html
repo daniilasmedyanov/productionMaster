@@ -1,0 +1,3229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ввод факта · VISUVA</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f0f0ef; --surface: #fff; --surface2: #f5f5f4;
+  --border: rgba(0,0,0,0.08); --border-med: rgba(0,0,0,0.12);
+  --text: #111110; --text-sec: #6b6b68; --text-hint: #a8a8a4;
+  --blue: #1d4ed8; --blue-bg: #eff4ff;
+  --green: #166534; --green-bg: #dcfce7;
+  --amber: #92400e; --amber-bg: #fef3c7;
+  --red: #991b1b; --red-bg: #fee2e2;
+  --radius: 10px; --radius-sm: 6px;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:13px; line-height:1.5; }
+.subtabs-bar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 32px; display:flex; height:38px; position:sticky; top:0; z-index:100; }
+.subtab { padding:0 16px; font-size:12.5px; color:var(--text-sec); cursor:pointer; border-bottom:2px solid transparent; height:100%; display:flex; align-items:center; user-select:none; transition:color .1s; white-space:nowrap; }
+.subtab:hover { color:var(--text); }
+.subtab.active { color:var(--blue); font-weight:500; border-bottom-color:var(--blue); }
+.meta-bar { padding:10px 32px; display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--text-hint); }
+.meta-dot { width:6px; height:6px; border-radius:50%; background:#22c55e; display:inline-block; margin-right:5px; }
+.refresh-btn { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--text-sec); font-size:12px; padding:4px 10px; border-radius:var(--radius-sm); border:0.5px solid var(--border-med); background:var(--surface); position:relative; }
+.refresh-btn:hover { background:var(--surface2); }
+.refresh-dot { width:7px; height:7px; border-radius:50%; background:#f59e0b; display:none; margin-right:2px; box-shadow:0 0 0 0 rgba(245,158,11,0.5); animation:dotPulse 2s infinite; }
+.refresh-dot.show { display:inline-block; }
+@keyframes dotPulse {
+  0%   { box-shadow:0 0 0 0 rgba(245,158,11,0.5); }
+  70%  { box-shadow:0 0 0 5px rgba(245,158,11,0); }
+  100% { box-shadow:0 0 0 0 rgba(245,158,11,0); }
+}
+.content { padding:0 32px 48px; }
+.kpi-row { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:20px; }
+.kpi-card { background:var(--surface); border:0.5px solid var(--border-med); border-radius:var(--radius); padding:14px 16px; }
+.kpi-label { font-size:10.5px; color:var(--text-sec); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.kpi-val { font-size:22px; font-weight:500; letter-spacing:-.5px; line-height:1.1; }
+.kpi-sub { font-size:11px; color:var(--text-hint); margin-top:4px; }
+.kpi-badge { display:inline-flex; align-items:center; padding:2px 7px; border-radius:20px; font-size:11px; font-weight:500; margin-top:5px; }
+.kpi-badge.green { background:var(--green-bg); color:var(--green); }
+.kpi-badge.amber { background:var(--amber-bg); color:var(--amber); }
+.kpi-badge.red   { background:var(--red-bg);   color:var(--red);   }
+.kpi-badge.blue  { background:var(--blue-bg);  color:var(--blue);  }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.project-block { background:var(--surface); border:0.5px solid var(--border-med); border-radius:var(--radius); overflow:hidden; }
+.project-head { padding:14px 18px 12px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.project-name-wrap { display:flex; align-items:center; gap:10px; }
+.project-pill { font-size:11.5px; font-weight:700; letter-spacing:.04em; padding:3px 10px; border-radius:4px; }
+.pill-t8 { background:#1e3a8a; color:#fff; }
+.pill-s2 { background:#14532d; color:#fff; }
+.project-title { font-size:13.5px; font-weight:500; }
+.area-col-header { display:grid; grid-template-columns:1fr 130px 100px 50px; gap:12px; padding:6px 18px; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-hint); border-bottom:0.5px solid var(--border); background:var(--surface2); }
+.col-right { text-align:right; }
+.area-row { display:grid; grid-template-columns:1fr 130px 100px 50px; align-items:center; gap:12px; padding:10px 18px; border-bottom:0.5px solid var(--border); transition:background .1s; cursor:pointer; }
+.area-row:last-child { border-bottom:none; }
+.area-row:hover { background:var(--surface2); }
+.area-name { font-size:13px; }
+.area-prog-wrap { display:flex; align-items:center; gap:8px; }
+.area-prog-track { flex:1; height:5px; border-radius:10px; background:var(--bg); overflow:hidden; }
+.area-prog-fill { height:100%; border-radius:10px; transition:width .6s ease; }
+.fill-green { background:#22c55e; } .fill-blue { background:#3b82f6; }
+.fill-amber { background:#f59e0b; } .fill-red { background:#ef4444; }
+.fill-gray  { background:#d1d5db; }
+.area-pct { font-size:12px; font-weight:500; min-width:30px; text-align:right; }
+.area-status { font-size:11px; font-weight:500; padding:2px 8px; border-radius:4px; text-align:center; }
+.status-ok   { background:var(--green-bg); color:var(--green); }
+.status-go   { background:var(--blue-bg);  color:var(--blue);  }
+.status-warn { background:var(--amber-bg); color:var(--amber); }
+.status-stop { background:var(--red-bg);   color:var(--red);   }
+.area-count  { font-size:12px; color:var(--text-sec); text-align:right; }
+.units-strip { display:flex; gap:6px; padding:8px 18px; background:var(--surface2); border-bottom:0.5px solid var(--border); flex-wrap:wrap; }
+.unit-chip { font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; border:0.5px solid var(--border-med); }
+.unit-chip.t8 { background:#eff4ff; color:#1e3a8a; }
+.unit-chip.s2 { background:#f0fdf4; color:#14532d; }
+.detail-wrap { display:flex; flex-direction:column; gap:14px; }
+.detail-title { font-size:15px; font-weight:500; }
+.detail-sub { font-size:12px; color:var(--text-sec); margin-top:2px; }
+.proj-switcher { display:flex; gap:6px; }
+.proj-btn { padding:4px 14px; border-radius:4px; font-size:12px; font-weight:600; cursor:pointer; border:0.5px solid var(--border-med); background:var(--surface2); color:var(--text-sec); transition:all .1s; }
+.proj-btn.active.t8 { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+.proj-btn.active.s2 { background:#14532d; color:#fff; border-color:#14532d; }
+.detail-table-wrap { background:var(--surface); border:0.5px solid var(--border-med); border-radius:var(--radius); overflow:auto; max-height:calc(100vh - 160px); }
+.detail-table { border-collapse:collapse; min-width:100%; }
+.detail-table .col-op-name { min-width:280px; }
+.detail-table th {
+  background:var(--surface2); font-size:10.5px; font-weight:500;
+  text-transform:uppercase; letter-spacing:.05em; color:var(--text-hint);
+  padding:7px 12px; text-align:left; border-bottom:0.5px solid var(--border-med);
+  white-space:nowrap; position:sticky; z-index:2;
+}
+.detail-table thead tr:nth-child(1) th { top:0; }
+.detail-table thead tr:nth-child(2) th { top:28px; }
+.detail-table thead tr:nth-child(3) th { top:56px; }
+.detail-table th.center { text-align:center; }
+.detail-table td { padding:7px 12px; border-bottom:0.5px solid var(--border); font-size:12.5px; vertical-align:middle; }
+.detail-table tr:last-child td { border-bottom:none; }
+.detail-table tr.group-header-row td { background:#f8f8f7; border-top:1.5px solid var(--border-med); border-bottom:0.5px solid var(--border-med); user-select:none; }
+.detail-table tr.group-header-row:hover td { background:#f0f0ef; }
+.detail-table tr.op-child td { background:#fff; }
+.detail-table tr.op-row:hover td, .detail-table tr.op-child:hover td { background:#fafaf9; }
+.col-num   { width:34px; color:var(--text-hint); font-size:11.5px; text-align:right; padding-right:8px; }
+.col-group { width:180px; font-size:12px; color:var(--text-sec); font-weight:500; vertical-align:top; padding-top:9px; }
+.col-op    { color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.col-kd    { width:80px; text-align:center; }
+.col-sub   { width:130px; font-size:11.5px; color:var(--text-sec); }
+.col-post  { width:150px; font-size:11px; color:var(--text-sec); overflow:hidden; }
+.col-wear  { width:110px; font-size:11px; color:var(--text-sec); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.col-date  { width:88px; text-align:center; }
+.plan-cell { cursor:pointer; transition:background .1s; }
+.plan-cell:hover { background:#eff4ff !important; outline:1px dashed var(--blue); outline-offset:-2px; }
+.fact-cell { cursor:pointer; transition:background .1s; }
+.fact-cell:hover { background:#ecfdf5 !important; outline:1px dashed #22c55e; outline-offset:-2px; }
+
+/* Date popup calendar */
+.date-popup {
+  position: fixed;
+  background: #fff;
+  border: 1px solid var(--border-med);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.08);
+  padding: 10px;
+  z-index: 10000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12.5px;
+  user-select: none;
+  animation: dpFadeIn .12s ease-out;
+}
+@keyframes dpFadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+.dp-header { display:flex; align-items:center; gap:4px; margin-bottom:8px; padding:0 2px; }
+.dp-nav {
+  width: 24px; height: 24px;
+  border: none; background: transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px; color: var(--text-sec);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .1s;
+}
+.dp-nav:hover { background: var(--surface2); color: var(--text); }
+.dp-title { flex: 1; text-align: center; font-weight: 600; font-size: 13px; color: var(--text); }
+.dp-dows { display: grid; grid-template-columns: repeat(7, 30px); gap:1px; margin-bottom:2px; }
+.dp-dow {
+  font-size: 10px;
+  text-align: center;
+  color: var(--text-hint);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 4px 0;
+  font-weight: 500;
+}
+.dp-grid { display: grid; grid-template-columns: repeat(7, 30px); gap:1px; }
+.dp-cell {
+  width: 30px; height: 28px;
+  border: none; background: transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .08s, color .08s;
+  font-family: inherit;
+}
+.dp-cell:hover { background: var(--blue-bg); color: var(--blue); }
+.dp-cell.dim { color: #c7c7c2; }
+.dp-cell.weekend { color: #c44; }
+.dp-cell.today { box-shadow: inset 0 0 0 1px var(--blue); font-weight: 600; }
+.dp-cell.current { background: var(--blue); color: #fff !important; font-weight: 600; }
+.dp-cell.current:hover { background: var(--blue); }
+.dp-footer {
+  display: flex; gap: 4px; margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.dp-action {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  background: var(--surface2);
+  color: var(--text);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background .1s;
+}
+.dp-action:hover { background: var(--border-med); }
+.dp-action.dp-today { color: var(--blue); }
+.dp-action.dp-clear { color: var(--red); }
+.dp-action.dp-cancel { color: var(--text-sec); }
+.badge-wear { display:inline-block; background:#fef9c3; color:#854d0e; border:0.5px solid #fde68a; padding:1px 6px; border-radius:4px; font-size:10.5px; white-space:nowrap; max-width:100px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+.badge-wear.moral { background:#fae8ff; color:#86198f; border-color:#f0abfc; }
+.badge-mdf { display:inline-block; background:#dbeafe; color:#1e40af; border:0.5px solid #93c5fd; padding:1px 6px; border-radius:4px; font-size:10.5px; white-space:nowrap; max-width:100px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+.badge-post { display:inline-block; background:var(--surface2); color:var(--text-sec); border:0.5px solid var(--border-med); padding:1px 5px; border-radius:4px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; display:inline-block; }
+.group-toggle { display:flex; gap:4px; }
+.group-btn { padding:3px 10px; border-radius:4px; font-size:11.5px; font-weight:500; cursor:pointer; border:0.5px solid var(--border-med); background:var(--surface2); color:var(--text-sec); transition:all .1s; }
+.group-btn.active { background:var(--text); color:#fff; border-color:var(--text); }
+.post-header-row td { background:#f0f0ef; font-size:11.5px; font-weight:600; color:var(--text-sec); padding:6px 12px; border-bottom:0.5px solid var(--border-med); border-top:1.5px solid var(--border-med); }
+.badge-post-group { display:inline-block; background:#e0e7ff; color:#3730a3; border-radius:4px; padding:2px 8px; font-size:11.5px; font-weight:600; margin-right:6px; }
+.badge-fact { display:inline-block; background:var(--green-bg); color:var(--green); padding:2px 7px; border-radius:4px; font-size:11px; font-weight:500; white-space:nowrap; max-width:72px; overflow:hidden; text-overflow:ellipsis; }
+.badge-plan { display:inline-block; background:var(--amber-bg); color:var(--amber); padding:2px 7px; border-radius:4px; font-size:11px; font-weight:500; white-space:nowrap; max-width:72px; overflow:hidden; text-overflow:ellipsis; }
+.badge-kd   { display:inline-block; background:var(--green-bg); color:var(--green); padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600; }
+.badge-empty{ display:inline-block; width:14px; height:2px; background:var(--border-med); border-radius:2px; vertical-align:middle; }
+.badge-nc   { font-size:10px; color:var(--text-hint); }
+.badge-sub  { display:inline-block; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:10.5px; }
+.unit-header-row th { border-left:1.5px solid var(--border-med); background:#f8f8f7; font-size:11px; font-weight:700; color:var(--text-sec); text-align:center; letter-spacing:.02em; text-transform:none; }
+.unit-header-row th:first-child { border-left:none; }
+.pf-header-row th { font-size:10px; padding:4px 12px; letter-spacing:.02em; text-transform:none; }
+.pf-plan { background:var(--amber-bg) !important; color:var(--amber) !important; border-left:1.5px solid var(--border-med); }
+.pf-fact  { background:var(--green-bg) !important; color:var(--green) !important; }
+.sheet-progress { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.sheet-progress-item { display:flex; align-items:center; gap:6px; }
+.sp-track { width:60px; height:5px; border-radius:10px; background:var(--bg); overflow:hidden; }
+.sp-fill  { height:100%; border-radius:10px; transition:width .5s ease; }
+.sp-pct   { font-size:11px; color:var(--text-sec); min-width:28px; }
+.loader { display:inline-block; width:14px; height:14px; border:2px solid var(--border-med); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:5px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.state-msg { padding:48px 32px; text-align:center; color:var(--text-sec); }
+.big-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; gap:14px; }
+.big-loading .loader { width:32px; height:32px; border-width:3px; }
+.big-loading-text { font-size:13px; color:var(--text-sec); }
+
+/* Большой дружелюбный лоадер для долгих операций */
+.page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 14px;
+  animation: plFadeIn .2s ease-out;
+}
+@keyframes plFadeIn { from{opacity:0} to{opacity:1} }
+.page-loader-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--border-med);
+  border-top-color: var(--blue);
+  border-right-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin-bottom: 8px;
+} } }
+.page-loader-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.2px;
+}
+.page-loader-sub {
+  font-size: 13px;
+  color: var(--text-sec);
+  margin-bottom: 8px;
+}
+.page-loader-bar {
+  width: 240px;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+.page-loader-bar-fill {
+  position: absolute;
+  top: 0; left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), #60a5fa, var(--blue));
+  background-size: 200% 100%;
+  border-radius: 10px;
+  animation: plBar 1.6s ease-in-out infinite;
+}
+@keyframes plBar {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(150%); }
+  100% { transform: translateX(150%); }
+}
+
+/* ── Гант ── */
+.gantt-wrap { background:var(--surface); border:0.5px solid var(--border-med); border-radius:var(--radius); overflow:hidden; }
+.gantt-unit-switcher { display:flex; gap:6px; flex-wrap:wrap; padding:14px 18px 10px; border-bottom:0.5px solid var(--border); align-items:center; }
+.gantt-unit-switcher span { font-size:11px; color:var(--text-hint); margin-right:4px; }
+.unit-btn { padding:4px 12px; border-radius:4px; font-size:12px; font-weight:600; cursor:pointer; border:0.5px solid var(--border-med); background:var(--surface2); color:var(--text-sec); transition:all .1s; }
+.unit-btn.active.t8 { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+.unit-btn.active.s2 { background:#14532d; color:#fff; border-color:#14532d; }
+.gantt-table { width:100%; border-collapse:collapse; }
+.gantt-table th { background:var(--surface2); font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--text-hint); padding:7px 12px; border-bottom:0.5px solid var(--border-med); white-space:nowrap; }
+.gantt-table td { padding:8px 12px; border-bottom:0.5px solid var(--border); vertical-align:middle; }
+.gantt-table tr:last-child td { border-bottom:none; }
+.gantt-table tr:hover td { background:var(--surface2); }
+.gantt-post-name { font-size:13px; font-weight:500; color:var(--text); }
+.gantt-meta { font-size:11px; color:var(--text-hint); margin-top:2px; }
+.gantt-date { font-size:12px; color:var(--text-sec); white-space:nowrap; }
+.gantt-date.empty { color:var(--text-hint); }
+.gantt-dur { font-size:11.5px; font-weight:500; }
+.gantt-dev { display:inline-block; font-size:11px; font-weight:600; padding:1px 6px; border-radius:4px; }
+.gantt-dev.late  { background:var(--red-bg);   color:var(--red);   }
+.gantt-dev.early { background:var(--green-bg); color:var(--green); }
+.gantt-dev.ok    { background:var(--green-bg); color:var(--green); }
+.gantt-bar-col { width:320px; min-width:220px; }
+.gantt-bar-wrap { position:relative; height:28px; background:var(--surface2); border-radius:6px; overflow:hidden; }
+.gantt-bar-plan { position:absolute; top:4px; height:8px; border-radius:4px; background:#93c5fd; }
+.gantt-bar-fact { position:absolute; top:16px; height:8px; border-radius:4px; background:#22c55e; }
+.gantt-bar-today { position:absolute; top:0; bottom:0; width:1.5px; background:#ef4444; opacity:.7; z-index:2; }
+.gantt-legend { display:flex; gap:14px; padding:8px 18px; font-size:11px; color:var(--text-sec); border-top:0.5px solid var(--border); align-items:center; }
+.gantt-legend-item { display:flex; align-items:center; gap:5px; }
+.gantt-legend-bar { width:20px; height:7px; border-radius:3px; }
+.gantt-no-data { font-size:12px; color:var(--text-hint); font-style:italic; }
+
+/* Экран выбора участка (мастер) */
+.picker-wrap { max-width:720px; margin:60px auto; padding:0 24px; text-align:center; }
+.picker-title { font-size:24px; font-weight:700; letter-spacing:-.5px; margin-bottom:8px; }
+.picker-sub { font-size:14px; color:var(--text-sec); margin-bottom:36px; }
+.picker-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; }
+.area-tile {
+  display:flex; align-items:center; justify-content:center;
+  padding:28px 20px; background:var(--surface); border:1px solid var(--border-med);
+  border-radius:12px; cursor:pointer; transition:all .15s; font-family:inherit;
+}
+.area-tile:hover { border-color:var(--blue); box-shadow:0 4px 16px rgba(29,78,216,0.12); transform:translateY(-2px); }
+.area-tile-label { font-size:16px; font-weight:600; color:var(--text); }
+
+/* ── МОБИЛЬНЫЙ РЕЖИМ ── */
+.m-wrap { padding:14px 14px 40px; max-width:560px; margin:0 auto; }
+.m-section-title { font-size:18px; font-weight:700; margin:8px 4px 16px; }
+.m-proj-switch { display:flex; gap:8px; margin-bottom:16px; }
+.m-proj-switch button {
+  flex:1; padding:10px; border:1px solid var(--border-med); background:var(--surface);
+  border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; color:var(--text-sec);
+}
+.m-proj-switch button.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+.m-unit-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.m-unit-tile {
+  padding:24px 12px; border:1px solid var(--border-med); background:var(--surface);
+  border-radius:12px; font-size:17px; font-weight:700; cursor:pointer; color:var(--text);
+  transition:all .12s;
+}
+.m-unit-tile:active { background:var(--blue); color:#fff; transform:scale(.97); }
+.m-back {
+  background:transparent; border:none; color:var(--blue); font-size:14px; font-weight:600;
+  padding:6px 0 12px; cursor:pointer;
+}
+.m-unit-header { font-size:22px; font-weight:800; margin-bottom:16px; letter-spacing:-.5px; }
+.m-group {
+  font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--text-hint); margin:20px 2px 8px; padding-bottom:6px; border-bottom:1px solid var(--border);
+}
+.m-op {
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:14px; margin-bottom:10px;
+}
+.m-op-name { font-size:14px; font-weight:500; margin-bottom:12px; line-height:1.35; }
+.m-dates { display:flex; gap:10px; }
+.m-date-col { flex:1; display:flex; flex-direction:column; gap:4px; }
+.m-date-label { font-size:11px; color:var(--text-hint); text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
+.m-plan-val { font-size:11px; color:var(--text-hint); }
+.m-fact-btn {
+  padding:12px 8px; border:1.5px dashed var(--border-med); background:var(--surface2);
+  border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; color:var(--text-sec);
+  min-height:46px; transition:all .12s; font-family:inherit;
+}
+.m-fact-btn.filled { background:var(--green-bg); color:var(--green); border:1.5px solid #22c55e; }
+.m-fact-btn:active { transform:scale(.97); }
+
+@media (max-width:640px) {
+  .picker-wrap { margin:32px auto; }
+  .picker-title { font-size:20px; }
+  .picker-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
+  .date-popup { font-size:14px; }
+  .dp-grid, .dp-dows { grid-template-columns:repeat(7, 38px); }
+  .dp-cell { width:38px; height:38px; font-size:14px; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="master-bar" id="master-bar" style="display:none">
+  <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
+    <div style="font-size:15px;font-weight:800;letter-spacing:-.5px">VISUVA</div>
+    <div style="font-size:13px;color:var(--text-sec)">·</div>
+    <div style="font-size:14px;font-weight:600" id="master-area-name">—</div>
+    <button onclick="backToPicker()" style="margin-left:auto;padding:5px 12px;border:0.5px solid var(--border-med);border-radius:6px;background:var(--surface2);cursor:pointer;font-size:12px;color:var(--text-sec)">← Сменить участок</button>
+    <button class="refresh-btn" id="refresh-btn" onclick="refresh()"><span class="refresh-dot" id="refresh-dot"></span>↺ Обновить</button>
+  </div>
+  <div class="meta-bar"><span id="meta-status"></span></div>
+</div>
+
+<div class="content" id="content">
+  <div id="picker-screen"></div>
+</div>
+
+<script>
+const GAS = 'https://script.google.com/macros/s/AKfycbwBp5A8c0jJ2Vx4eb0zJMe1r6JwvPsQlaTo8CTzjtx4pDHnUZ3xoW3wp49SA7JRwpFA/exec';
+
+const TAB_SHEETS = {
+  formovka:   { t8: 'формовка Т8', s2: 'формовка S2' },
+  svarka:     { t8: 'сварка T8',   s2: 'сварка S2'   },
+  sborka:     { t8: 'сборка Т8',   s2: 'сборка S2'   },
+  poliuretan: { t8: 'Полиуретан Т8', s2: null         },
+  kuzov:      { t8: 'кузовная Т8',  s2: 'кузовная S2' },
+};
+
+const UNITS_T8 = ['Т8-5','Т8-6','Т8-7'];
+const UNITS_S2 = ['S2-5','S2-1','S2-2','S2-3','S2-4'];
+
+let summaryData = null;
+let detailCache = {};
+let ganttData   = null;
+let currentTab  = 'svodka';
+let currentProj = {};
+let currentGroupMode  = {};
+let currentGanttUnit  = 'Т8-5';
+
+// ════════════════════════════════════════════════
+// МАСТЕР-РЕЖИМ: только факт, один участок
+// ════════════════════════════════════════════════
+window.EDIT_MODE = 'fact';
+
+const AREA_LABELS = {
+  formovka:'Формовка', svarka:'Сварка', sborka:'Сборка',
+  poliuretan:'Полиуретан', kuzov:'Кузовная'
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Поддержка прямой ссылки ?area=svarka (на будущее), иначе экран выбора
+  const params = new URLSearchParams(location.search);
+  const area = params.get('area');
+  if (area && TAB_SHEETS[area]) {
+    openArea(area);
+  } else {
+    renderPicker();
+  }
+});
+
+function renderPicker() {
+  document.getElementById('master-bar').style.display = 'none';
+  const tiles = Object.keys(TAB_SHEETS).map(key => {
+    const label = AREA_LABELS[key] || key;
+    return `<button class="area-tile" onclick="openArea('${key}')">
+      <div class="area-tile-label">${label}</div>
+    </button>`;
+  }).join('');
+  document.getElementById('content').innerHTML = `
+    <div class="picker-wrap">
+      <div class="picker-title">Выберите свой участок</div>
+      <div class="picker-sub">Вы сможете отмечать фактические даты выполнения операций</div>
+      <div class="picker-grid">${tiles}</div>
+    </div>`;
+}
+
+function openArea(area) {
+  currentTab = area;
+  currentProj[area] = currentProj[area] || 't8';
+  document.getElementById('master-bar').style.display = 'block';
+  document.getElementById('master-area-name').textContent = '✓ ' + (AREA_LABELS[area] || area);
+  // грузим участок
+  if (!summaryData) { loadSummaryThenArea(area); }
+  else renderTab();
+}
+
+async function loadSummaryThenArea(area) {
+  // summary нужен для мини-прогресса в шапке detail; грузим тихо
+  try {
+    const r = await fetch(GAS + '?action=summary&_=' + Date.now());
+    summaryData = await r.json();
+  } catch(e) { summaryData = { t8:{areas:{}}, s2:{areas:{}} }; }
+  renderTab();
+}
+
+function backToPicker() {
+  mobileUnit = null;
+  renderPicker();
+}
+
+// ════════════════════════════════════════════════
+// МОБИЛЬНЫЙ РЕЖИМ
+// ════════════════════════════════════════════════
+let mobileUnit = null; // выбранная машина на телефоне
+function isMobile() { return window.innerWidth <= 640; }
+
+// Перерисовка при повороте/ресайзе
+window.addEventListener('resize', () => {
+  if (currentTab && TAB_SHEETS[currentTab]) renderTab();
+});
+
+// Точка входа в мобильный рендер участка
+function renderMobile() {
+  const tab    = currentTab;
+  const proj   = currentProj[tab] || 't8';
+  const sheets = TAB_SHEETS[tab];
+  const sheet  = sheets && sheets[proj];
+  const detail = sheet && detailCache[sheet];
+
+  if (sheet && !detail) { loadDetail(tab); return; }
+  if (!detail) { document.getElementById('content').innerHTML = '<div class="state-msg">Нет данных</div>'; return; }
+
+  const units = detail.units || [];
+
+  // Если машина не выбрана — показываем выбор машины
+  if (!mobileUnit || !units.includes(mobileUnit)) {
+    renderMobileUnitPicker(units, proj, sheets);
+    return;
+  }
+
+  renderMobileOps(detail, mobileUnit);
+}
+
+function renderMobileUnitPicker(units, proj, sheets) {
+  const hasT8 = !!(sheets && sheets.t8);
+  const hasS2 = !!(sheets && sheets.s2);
+  let projSwitch = '';
+  if (hasT8 && hasS2) {
+    projSwitch = `<div class="m-proj-switch">
+      <button class="${proj==='t8'?'active':''}" onclick="mSwitchProj('t8')">T8</button>
+      <button class="${proj==='s2'?'active':''}" onclick="mSwitchProj('s2')">S2</button>
+    </div>`;
+  }
+  const tiles = units.map(u =>
+    `<button class="m-unit-tile" onclick="mSelectUnit('${esc(u)}')">${esc(u)}</button>`
+  ).join('');
+  document.getElementById('content').innerHTML = `
+    <div class="m-wrap">
+      <div class="m-section-title">Выберите машину</div>
+      ${projSwitch}
+      <div class="m-unit-grid">${tiles}</div>
+    </div>`;
+}
+
+function mSwitchProj(proj) {
+  currentProj[currentTab] = proj;
+  mobileUnit = null;
+  const sheet = TAB_SHEETS[currentTab][proj];
+  if (sheet && !detailCache[sheet]) loadDetail(currentTab);
+  else renderTab();
+}
+function mSelectUnit(u) { mobileUnit = u; renderTab(); }
+function mBackToUnits() { mobileUnit = null; renderTab(); }
+
+function renderMobileOps(detail, unit) {
+  const rows = detail.rows || [];
+  const se   = detail.hasStartEnd;
+  const pf   = detail.hasPlanFact;
+  const sheet = TAB_SHEETS[currentTab][currentProj[currentTab]||'t8'];
+
+  // Группируем по посту (или узлу)
+  const groupMap = new Map();
+  rows.forEach(r => {
+    const g = r.post || r.group || '—';
+    if (!groupMap.has(g)) groupMap.set(g, []);
+    groupMap.get(g).push(r);
+  });
+
+  let html = `<div class="m-wrap">
+    <button class="m-back" onclick="mBackToUnits()">← Все машины</button>
+    <div class="m-unit-header">${esc(unit)}</div>`;
+
+  groupMap.forEach((grpRows, groupName) => {
+    html += `<div class="m-group">${esc(displayPost(groupName))}</div>`;
+    grpRows.forEach(row => {
+      const d = (row.dates && row.dates[unit]) || {};
+      const sr = row.sourceRow || '';
+      html += `<div class="m-op">
+        <div class="m-op-name">${esc(row.label||'')}</div>
+        ${renderMobileDates(d, se, pf, sheet, sr, unit)}
+      </div>`;
+    });
+  });
+
+  html += `</div>`;
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderMobileDates(d, se, pf, sheet, sr, unit) {
+  // Мобильная пара план/факт. Факт — крупная зелёная кнопка (тап = редактировать).
+  const factBtn = (field, val, planVal, label) => {
+    const has = !!val;
+    return `<div class="m-date-col">
+      <div class="m-date-label">${label}</div>
+      <div class="m-plan-val">${planVal ? 'план: '+esc(planVal) : '—'}</div>
+      <button class="m-fact-btn ${has?'filled':''}"
+        data-sheet="${esc(sheet)}" data-row="${sr}" data-unit="${esc(unit)}" data-field="${field}" data-current="${esc(val||'')}"
+        onclick="startFactEdit(this)">${has ? esc(val) : 'отметить'}</button>
+    </div>`;
+  };
+
+  if (se) {
+    return `<div class="m-dates">
+      ${factBtn('startFact', d.startFact, d.startPlan, 'Старт')}
+      ${factBtn('endFact', d.endFact, d.endPlan, 'Конец')}
+    </div>`;
+  } else if (pf) {
+    return `<div class="m-dates">
+      ${factBtn('fact', d.fact, d.plan, 'Дата')}
+    </div>`;
+  }
+  return '';
+}
+
+function refresh() {
+  detailCache = {};
+  summaryData = null;
+  ganttData = null;
+  clearStale();
+  // В мастер-режиме currentTab всегда участок — перезагружаем summary (для мини-прогресса) и участок
+  loadSummaryThenArea(currentTab);
+}
+
+// Помечаем что есть несинхронизированные правки — оранжевая точка на «Обновить»
+function markStale() {
+  const dot = document.getElementById('refresh-dot');
+  if (dot) dot.classList.add('show');
+}
+function clearStale() {
+  const dot = document.getElementById('refresh-dot');
+  if (dot) dot.classList.remove('show');
+}
+
+async function loadGantt() {
+  setMeta('loading');
+  if (currentTab === 'svodka' || currentTab === 'gantt') {
+    document.getElementById('content').innerHTML = renderBigLoader('Загружаем гант', 'опрашиваю 8 листов в Google Sheets — пара секунд');
+  }
+  try {
+    const r = await fetch(GAS + '?action=gantt&_=' + Date.now());
+    ganttData = await r.json();
+    if (currentTab === 'svodka' || currentTab === 'gantt') renderTab();
+    setMeta('ok', ganttData.updated);
+  } catch(e) {
+    ganttData = { _error: e.message, units: [...UNITS_T8, ...UNITS_S2], gantt: {}, range: {} };
+    if (currentTab === 'svodka' || currentTab === 'gantt') renderTab();
+    setMeta('error');
+  }
+}
+
+async function loadSummary() {
+  setMeta('loading');
+  if (currentTab === 'svodka') {
+    document.getElementById('content').innerHTML = renderBigLoader('Загружаем сводку', 'опрашиваю 8 листов в Google Sheets — пара секунд');
+  }
+  try {
+    const r = await fetch(GAS + '?action=summary&_=' + Date.now());
+    summaryData = await r.json();
+    renderTab();
+    setMeta('ok', summaryData.updated);
+  } catch(e) {
+    summaryData = getDemoData();
+    summaryData._error = e.message;
+    renderTab();
+    setMeta('error');
+  }
+}
+
+// Большой дружелюбный лоадер для долгих операций (сводка / гант)
+function renderBigLoader(title, subtitle) {
+  return `<div class="page-loader">
+    <div class="page-loader-spinner"></div>
+    <div class="page-loader-title">${esc(title)}</div>
+    <div class="page-loader-sub">${esc(subtitle)}</div>
+    <div class="page-loader-bar"><div class="page-loader-bar-fill"></div></div>
+  </div>`;
+}
+
+async function loadDetail(tab) {
+  const sheets = TAB_SHEETS[tab];
+  if (!sheets) return;
+  setMeta('loading');
+  const proj = currentProj[tab] || 't8';
+  const sheetName = sheets[proj];
+  if (!sheetName) { currentProj[tab] = 't8'; renderTab(); return; }
+  if (detailCache[sheetName]) {
+    renderTab();
+    setMeta('ok', summaryData && summaryData.updated);
+    prefetchOtherProject(tab, proj);
+    return;
+  }
+  document.getElementById('content').innerHTML =
+    renderBigLoader('Загружаем участок', sheetName);
+  try {
+    const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(sheetName) + '&_=' + Date.now());
+    const data = await r.json();
+    detailCache[sheetName] = data;
+    renderTab();
+    setMeta('ok', summaryData && summaryData.updated);
+    prefetchOtherProject(tab, proj);
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      `<div class="state-msg">Ошибка: ${e.message}</div>`;
+    setMeta('error');
+  }
+}
+
+// Тихая фоновая догрузка второго проекта — нужна для ганта,
+// который показывает оба проекта (T8 + S2) одновременно.
+async function prefetchOtherProject(tab, activeProj) {
+  const sheets = TAB_SHEETS[tab];
+  if (!sheets) return;
+  const otherProj = activeProj === 't8' ? 's2' : 't8';
+  const otherSheet = sheets[otherProj];
+  if (!otherSheet) return;             // у участка нет второго проекта (полиуретан, кузовная)
+  if (detailCache[otherSheet]) return; // уже загружено
+  try {
+    const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(otherSheet) + '&_=' + Date.now());
+    detailCache[otherSheet] = await r.json();
+    // ВАЖНО: НЕ перерисовываем таблицу здесь!
+    // Раньше тут был renderTab(), который затирал раскрытые группы
+    // (пользователь раскрыл узел → фоновая догрузка → re-render → всё схлопнулось).
+    // Второй проект нужен только для ганта — он подхватит кэш при переключении.
+  } catch(e) { /* тихо игнорируем */ }
+}
+
+function renderTab() {
+  const el = document.getElementById('content');
+  // В мастер-режиме currentTab всегда участок. На узком экране — мобильный поток.
+  if (currentTab && TAB_SHEETS[currentTab] && isMobile()) {
+    renderMobile();
+    return;
+  }
+  if (currentTab === 'svodka') {
+    if (!summaryData) { loadSummary(); return; }
+    if (!ganttData)   { loadGantt(); return; }
+    el.innerHTML = renderSvodka(summaryData);
+  } else if (currentTab === 'gantt') {
+    if (!ganttData) { loadGantt(); return; }
+    el.innerHTML = renderGantt(ganttData);
+  } else if (currentTab === 'plan') {
+    renderPlanPage();
+  } else {
+    const sheets = TAB_SHEETS[currentTab];
+    const proj   = currentProj[currentTab] || 't8';
+    const sheet  = sheets && sheets[proj];
+    if (sheet && !detailCache[sheet]) { loadDetail(currentTab); return; }
+    el.innerHTML = renderDetail(currentTab, proj);
+  }
+  animateBars();
+}
+
+// ── ГАНТ ────────────────────────────────────────────────────
+function switchGanttUnit(unit) {
+  currentGanttUnit = unit;
+  renderTab();
+}
+
+function renderGantt(data) {
+  const allUnits = data.units || [...UNITS_T8, ...UNITS_S2];
+  const unit     = currentGanttUnit;
+  const posts    = (data.gantt && data.gantt[unit]) || {};
+
+  const parseD = s => {
+    if (!s) return null;
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    return m ? new Date(+m[3], +m[2]-1, +m[1]) : null;
+  };
+  function minD(a,b){ const da=parseD(a),db=parseD(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da<=db?a:b; }
+  function maxD(a,b){ const da=parseD(a),db=parseD(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da>=db?a:b; }
+  function fmtDate(s) {
+    if (!s) return '—';
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    return m ? `${m[1]}.${m[2]}.${m[3].slice(2)}` : s;
+  }
+  function fmtDur(d) { return d !== null && d !== undefined ? `${d} д` : '—'; }
+
+  // Порядок постов
+  const POST_ORDER = data.postOrder || [
+    'Пост кузовной сборки','Сборочный пост 1','Сборочный пост 2','Сборочный пост 3','Сборочный пост 4'
+  ];
+  const postNames = [
+    ...POST_ORDER.filter(p => posts[p]),
+    ...Object.keys(posts).filter(p => !POST_ORDER.includes(p))
+  ];
+
+  // Диапазон дат по текущей единице
+  let gMin = '', gMax = '';
+  postNames.forEach(n => {
+    const p = posts[n];
+    if (p.startPlan) gMin = minD(gMin, p.startPlan) || p.startPlan;
+    if (p.endPlan)   gMax = maxD(gMax, p.endPlan)   || p.endPlan;
+    if (p.startFact) gMin = minD(gMin, p.startFact) || p.startFact;
+    if (p.endFact)   gMax = maxD(gMax, p.endFact)   || p.endFact;
+  });
+
+  const dMin = parseD(gMin), dMax = parseD(gMax);
+  const totalDays = (dMin && dMax) ? Math.round((dMax - dMin) / 86400000) + 1 : 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  function toPct(dateStr) {
+    if (!totalDays || !dMin) return null;
+    const d = parseD(dateStr);
+    if (!d) return null;
+    return Math.max(0, Math.min(100, (d - dMin) / 86400000 / totalDays * 100));
+  }
+
+  // Переключатель единиц
+  let unitSwitcher = `<div class="gantt-unit-switcher"><span>Единица:</span>`;
+  allUnits.forEach(u => {
+    const cls = UNITS_T8.includes(u) ? 't8' : 's2';
+    unitSwitcher += `<button class="unit-btn ${u===unit?'active '+cls:''}" onclick="switchGanttUnit('${u}')">${u}</button>`;
+  });
+  unitSwitcher += `</div>`;
+
+  if (!postNames.length) {
+    return `<div class="gantt-wrap">${unitSwitcher}
+      <div class="state-msg">Нет данных для ${unit}</div></div>`;
+  }
+
+  // Шкала месяцев
+  const MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  let monthTicks = '';
+  if (dMin && dMax) {
+    let cur = new Date(dMin.getFullYear(), dMin.getMonth(), 1);
+    while (cur <= dMax) {
+      const pct = toPct(
+        String(cur.getDate()).padStart(2,'0') + '.' +
+        String(cur.getMonth()+1).padStart(2,'0') + '.' + cur.getFullYear()
+      );
+      // Ширина месяца в %
+      const nextMonth = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+      const endOfMonth = new Date(Math.min(nextMonth-1, dMax));
+      const pctEnd = toPct(
+        String(endOfMonth.getDate()).padStart(2,'0') + '.' +
+        String(endOfMonth.getMonth()+1).padStart(2,'0') + '.' + endOfMonth.getFullYear()
+      );
+      const w = Math.max(0, (pctEnd||0) - (pct||0) + (100/totalDays));
+      if (pct !== null) {
+        monthTicks += `<div style="position:absolute;left:${pct}%;width:${w}%;border-left:1px solid var(--border-med);padding-left:4px;font-size:10px;color:var(--text-hint);white-space:nowrap;overflow:hidden;height:100%;display:flex;align-items:center">${MONTHS_RU[cur.getMonth()]} ${cur.getFullYear()}</div>`;
+      }
+      cur = nextMonth;
+    }
+  }
+
+  // Линия сегодня
+  const todayPct = toPct(
+    String(today.getDate()).padStart(2,'0') + '.' +
+    String(today.getMonth()+1).padStart(2,'0') + '.' + today.getFullYear()
+  );
+  const todayLine = todayPct !== null
+    ? `<div style="position:absolute;left:${todayPct}%;top:0;bottom:0;width:1.5px;background:#ef4444;opacity:.6;z-index:3;pointer-events:none"></div>`
+    : '';
+
+  // Строки постов
+  const LEFT_W = 220; // px ширина левой колонки с именем
+  let rows = '';
+  postNames.forEach(postName => {
+    const p = posts[postName];
+    const spPct = toPct(p.startPlan), epPct = toPct(p.endPlan);
+    const sfPct = toPct(p.startFact), efPct = toPct(p.endFact);
+    const hasPlan = spPct !== null && epPct !== null;
+    const hasFact = sfPct !== null && efPct !== null;
+    const planW   = hasPlan ? Math.max(0.3, epPct - spPct) : 0;
+    const factW   = hasFact ? Math.max(0.3, efPct - sfPct) : 0;
+    const dev     = p.deviation;
+    const devHtml = dev !== null && dev !== undefined
+      ? ` <span class="gantt-dev ${dev>0?'late':dev<0?'early':'ok'}">${dev>0?'+':''}${dev}д</span>` : '';
+
+    // Префикс "Подготовка →" нужен только перед сборочными постами
+    // (потому что подготовку к ним делают сварка/формовка/полиуретан).
+    // Перед "Пост кузовной сборки" префикс не нужен — это сам кузовной этап.
+    const isSborkaPost = /сборочный пост/i.test(postName) || /^пост \d/i.test(postName);
+    const hasSborkaSheet = (p.sheets || []).some(s => /сборка/i.test(s));
+    const prefix = (isSborkaPost && !hasSborkaSheet) ? '🔧 Подготовка → ' : '';
+
+    rows += `<div style="display:flex;align-items:center;border-bottom:0.5px solid var(--border);min-height:48px" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+      <!-- Левая колонка: имя поста -->
+      <div style="width:${LEFT_W}px;min-width:${LEFT_W}px;padding:8px 14px;border-right:0.5px solid var(--border-med)">
+        <div style="font-size:12.5px;font-weight:500;color:var(--text)">${prefix}${esc(displayPost(postName))}</div>
+        <div style="font-size:11px;color:var(--text-hint);margin-top:1px">${p.opCount||0} оп. · ${fmtDate(p.startPlan)} → ${fmtDate(p.endPlan)}${devHtml}</div>
+        ${hasFact ? `<div style="font-size:10.5px;color:var(--text-sec);margin-top:1px">факт: ${fmtDate(p.startFact)} → ${fmtDate(p.endFact)} · ${fmtDur(p.durationFact)}</div>` : ''}
+      </div>
+      <!-- Правая колонка: полосы на общей шкале -->
+      <div style="flex:1;position:relative;height:48px;overflow:hidden">
+        ${todayLine}
+        ${hasPlan ? `<div style="position:absolute;left:${spPct}%;width:${planW}%;top:12px;height:10px;background:#93c5fd;border-radius:3px;z-index:1" title="План: ${fmtDate(p.startPlan)} — ${fmtDate(p.endPlan)}"></div>` : ''}
+        ${hasFact ? `<div style="position:absolute;left:${sfPct}%;width:${factW}%;top:26px;height:10px;background:#22c55e;border-radius:3px;z-index:1" title="Факт: ${fmtDate(p.startFact)} — ${fmtDate(p.endFact)}"></div>` : ''}
+      </div>
+    </div>`;
+  });
+
+  return `<div class="gantt-wrap" style="overflow:hidden">
+    ${unitSwitcher}
+    ${data._error ? `<div style="background:var(--red-bg);color:var(--red);padding:8px 18px;font-size:12px">⚠ ${data._error} — демо</div>` : ''}
+    <!-- Шапка шкалы -->
+    <div style="display:flex;border-bottom:1px solid var(--border-med)">
+      <div style="width:${LEFT_W}px;min-width:${LEFT_W}px;padding:6px 14px;font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--text-hint);border-right:0.5px solid var(--border-med)">Пост</div>
+      <div style="flex:1;position:relative;height:28px">${monthTicks}</div>
+    </div>
+    <!-- Строки -->
+    <div>${rows}</div>
+    <!-- Легенда -->
+    <div class="gantt-legend">
+      <div class="gantt-legend-item"><div class="gantt-legend-bar" style="background:#93c5fd"></div>План</div>
+      <div class="gantt-legend-item"><div class="gantt-legend-bar" style="background:#22c55e"></div>Факт</div>
+      <div class="gantt-legend-item"><div class="gantt-legend-bar" style="background:#ef4444;width:2px;height:12px;border-radius:1px"></div>Сегодня</div>
+      <div style="margin-left:auto;font-size:11px;color:var(--text-hint)">Строки = подготовка сварочных деталей для поста · даты сборки добавим позже</div>
+    </div>
+  </div>`;
+}
+
+function sheetLabel(s) {
+  const map = {
+    'формовка Т8':'Форм.','сварка T8':'Свар.','сборка Т8':'Сбор.',
+    'Полиуретан Т8':'Полиур.','кузовная Т8':'Куз.',
+    'формовка S2':'Форм.','сварка S2':'Свар.','сборка S2':'Сбор.',
+  };
+  return map[s] || s;
+}
+
+// ── СВОДКА ──────────────────────────────────────────────────
+function renderSvodka(summData) {
+  let html = '';
+  if (summData && summData._error) {
+    html += `<div style="background:var(--red-bg);color:var(--red);border-radius:var(--radius);padding:10px 16px;margin-bottom:14px;font-size:12px;">⚠ ${summData._error} — демо-данные</div>`;
+  }
+
+  // Если ganttData ещё не загружен — показываем лоадер и грузим
+  if (!ganttData) {
+    loadGantt();
+    html += `<div class="big-loading"><span class="loader"></span><div class="big-loading-text">Загружаем данные Ганта...</div></div>`;
+    return html;
+  }
+
+  html += renderSvodkaGantt(ganttData);
+  return html;
+}
+
+function renderSvodkaGantt(data) {
+  const allUnits = [...UNITS_T8, ...UNITS_S2];
+  const gantt    = data.gantt || {};
+
+  const parseD = s => {
+    if (!s) return null;
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    return m ? new Date(+m[3], +m[2]-1, +m[1]) : null;
+  };
+  function minD(a,b){ const da=parseD(a),db=parseD(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da<=db?a:b; }
+  function maxD(a,b){ const da=parseD(a),db=parseD(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da>=db?a:b; }
+  function fmtShort(s) {
+    if (!s) return '—';
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    return m ? `${m[1]}.${m[2]}.${m[3].slice(2)}` : s;
+  }
+
+  // Собираем диапазоны по машинам
+  const unitRanges = {};
+  allUnits.forEach(unit => {
+    const posts = gantt[unit] || {};
+    let sp='',ep='',sf='',ef='',totalOps=0;
+    Object.values(posts).forEach(p => {
+      if (p.startPlan) sp = minD(sp,p.startPlan)||p.startPlan;
+      if (p.endPlan)   ep = maxD(ep,p.endPlan)||p.endPlan;
+      if (p.startFact) sf = minD(sf,p.startFact)||p.startFact;
+      if (p.endFact)   ef = maxD(ef,p.endFact)||p.endFact;
+      totalOps += p.opCount||0;
+    });
+    if (!sp && !ep && !sf && !ef) return; // пропускаем машины без данных
+    const dev = (() => { const dp=parseD(ep),df=parseD(ef); if(!dp||!df)return null; return Math.round((df-dp)/86400000); })();
+    unitRanges[unit] = { startPlan:sp, endPlan:ep, startFact:sf, endFact:ef, dev, totalOps };
+  });
+
+  const unitsWithData = allUnits.filter(u => unitRanges[u]);
+  if (!unitsWithData.length) return `<div class="state-msg">Нет данных — заполните даты в листах</div>`;
+
+  // Глобальный диапазон
+  let gMin='',gMax='';
+  Object.values(unitRanges).forEach(r => {
+    if (r.startPlan) gMin=minD(gMin,r.startPlan)||r.startPlan;
+    if (r.endPlan)   gMax=maxD(gMax,r.endPlan)||r.endPlan;
+    if (r.startFact) gMin=minD(gMin,r.startFact)||r.startFact;
+    if (r.endFact)   gMax=maxD(gMax,r.endFact)||r.endFact;
+  });
+  // Расширяем чуть для красоты
+  const dMin0 = parseD(gMin), dMax0 = parseD(gMax);
+  const dMin = dMin0 ? new Date(dMin0.getFullYear(), dMin0.getMonth(), 1) : null;
+  const dMax = dMax0 ? new Date(dMax0.getFullYear(), dMax0.getMonth()+1, 0) : null;
+  const totalDays = (dMin&&dMax) ? Math.round((dMax-dMin)/86400000)+1 : 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  function toPct(dateStr) {
+    if (!totalDays||!dMin) return null;
+    const d = parseD(dateStr); if (!d) return null;
+    return Math.max(0, Math.min(100, (d-dMin)/86400000/totalDays*100));
+  }
+  function todayFmt() {
+    return String(today.getDate()).padStart(2,'0')+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+today.getFullYear();
+  }
+  const todayPct = toPct(todayFmt());
+
+  // Шкала месяцев
+  const MONTHS_RU = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  let monthTicks = '';
+  if (dMin&&dMax) {
+    let cur = new Date(dMin);
+    while (cur <= dMax) {
+      const ds = String(cur.getDate()).padStart(2,'0')+'.'+String(cur.getMonth()+1).padStart(2,'0')+'.'+cur.getFullYear();
+      const pct = toPct(ds);
+      const nextM = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+      const eom = new Date(Math.min(nextM-1, dMax));
+      const ds2 = String(eom.getDate()).padStart(2,'0')+'.'+String(eom.getMonth()+1).padStart(2,'0')+'.'+eom.getFullYear();
+      const pct2 = toPct(ds2);
+      const w = Math.max(0,(pct2||0)-(pct||0)+(100/totalDays));
+      if (pct!==null) monthTicks += `<div style="position:absolute;left:${pct}%;width:${w}%;border-left:1px solid var(--border);padding-left:6px;font-size:10.5px;color:var(--text-hint);white-space:nowrap;overflow:hidden;height:100%;display:flex;align-items:center;font-weight:500">${MONTHS_RU[cur.getMonth()]} ${cur.getFullYear()}</div>`;
+      cur = nextM;
+    }
+  }
+
+  const LEFT_W = 200;
+  const todayLine = todayPct!==null ? `<div style="position:absolute;left:${todayPct}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:.5;z-index:5;pointer-events:none"></div>` : '';
+
+  // Строки машин
+  let t8rows='', s2rows='';
+  unitsWithData.forEach(unit => {
+    const r = unitRanges[unit];
+    const isT8 = UNITS_T8.includes(unit);
+    const planColor = isT8 ? '#93c5fd' : '#93c5fd';
+    const factColor = isT8 ? '#22c55e' : '#22c55e';
+    const textColor = isT8 ? '#1e3a8a' : '#14532d';
+    const bgColor   = isT8 ? '#eff4ff' : '#f0fdf4';
+
+    const spPct=toPct(r.startPlan), epPct=toPct(r.endPlan);
+    const sfPct=toPct(r.startFact), efPct=toPct(r.endFact);
+    const hasPlan = spPct!==null&&epPct!==null;
+    const hasFact = sfPct!==null&&efPct!==null;
+    const planW = hasPlan ? Math.max(0.5, epPct-spPct) : 0;
+    const factW = hasFact ? Math.max(0.5, efPct-sfPct) : 0;
+
+    const dev = r.dev;
+    const devHtml = dev!==null&&dev!==undefined
+      ? `<span style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;background:${dev>0?'#fee2e2':dev<0?'#dcfce7':'#dcfce7'};color:${dev>0?'#991b1b':dev<0?'#166534':'#166534'}">${dev>0?'+':''}${dev}д</span>` : '';
+
+    // % готовности — считаем по факту от плана
+    const dSP=parseD(r.startPlan), dEP=parseD(r.endPlan), dEF=parseD(r.endFact)||today;
+    let pct = 0;
+    if (dSP&&dEP) {
+      const planLen = Math.max(1,(dEP-dSP)/86400000);
+      const done    = Math.min(dEF,dEP);
+      pct = Math.round(Math.max(0,Math.min(100,(done-dSP)/86400000/planLen*100)));
+    }
+
+    const row = `<div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border)" onmouseenter="this.style.background='#fafaf9'" onmouseleave="this.style.background=''">
+      <!-- Левая колонка -->
+      <div style="width:${LEFT_W}px;min-width:${LEFT_W}px;padding:10px 16px;border-right:0.5px solid var(--border-med);display:flex;flex-direction:column;justify-content:center;gap:5px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px;font-weight:700;padding:3px 10px;border-radius:5px;background:${bgColor};color:${textColor};letter-spacing:.02em">${unit}</span>
+          <div style="flex:1;height:5px;background:var(--surface2);border-radius:10px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#22c55e;border-radius:10px;transition:width .6s"></div></div>
+          <span style="font-size:11px;font-weight:600;color:${textColor};min-width:28px">${pct}%</span>
+        </div>
+        <div style="font-size:10.5px;color:var(--text-sec);display:flex;gap:6px;align-items:center">
+          <span>${fmtShort(r.startPlan)} → ${fmtShort(r.endPlan)}</span>
+          ${devHtml}
+        </div>
+      </div>
+      <!-- Гант-полоса -->
+      <div style="flex:1;position:relative;overflow:hidden">
+        ${todayLine}
+        ${hasPlan ? `<div title="План: ${fmtShort(r.startPlan)} — ${fmtShort(r.endPlan)}" style="position:absolute;left:${spPct}%;width:${planW}%;top:50%;transform:translateY(-110%);height:12px;background:${planColor};border-radius:4px;z-index:1"></div>` : ''}
+        ${hasFact ? `<div title="Факт: ${fmtShort(r.startFact)} — ${fmtShort(r.endFact)}" style="position:absolute;left:${sfPct}%;width:${factW}%;top:50%;transform:translateY(10%);height:12px;background:#22c55e;border-radius:4px;z-index:2;opacity:.85"></div>` : ''}
+      </div>
+    </div>`;
+
+    if (isT8) t8rows += row; else s2rows += row;
+  });
+
+  const section = (label, color, rows) => rows ? `
+    <div style="padding:5px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border-med);border-top:0.5px solid var(--border-med)">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:${color}">${label}</span>
+    </div>${rows}` : '';
+
+  return `<div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);overflow:hidden">
+    <!-- Шапка шкалы -->
+    <div style="display:flex;border-bottom:1px solid var(--border-med)">
+      <div style="width:${LEFT_W}px;min-width:${LEFT_W}px;padding:7px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-hint);border-right:0.5px solid var(--border-med)">Машина / Прогресс</div>
+      <div style="flex:1;position:relative;height:32px">${monthTicks}</div>
+    </div>
+    ${section('T8','#1e3a8a',t8rows)}
+    ${section('S2','#14532d',s2rows)}
+    <!-- Легенда -->
+    <div style="display:flex;gap:16px;padding:8px 16px;align-items:center;border-top:0.5px solid var(--border);flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sec)"><div style="width:20px;height:7px;border-radius:3px;background:#93c5fd"></div>План</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sec)"><div style="width:20px;height:7px;border-radius:3px;background:#22c55e"></div>Факт</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sec)"><div style="width:2px;height:14px;border-radius:1px;background:#ef4444;opacity:.6"></div>Сегодня</div>
+      <div style="margin-left:auto;font-size:10.5px;color:var(--text-hint)">Обновлено ${data.updated ? new Date(data.updated).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+    </div>
+  </div>`;
+}
+
+function renderProjectBlock(proj, projData, units) {
+  const areas = projData.areas || {};
+  const cls   = proj === 'T8' ? 't8' : 's2';
+  const tabMap = proj === 'T8'
+    ? { 'Формовка':'формовка Т8','Сварка':'сварка T8','Сборка':'сборка Т8','Полиуретан':'Полиуретан Т8','Кузовная':'кузовная Т8' }
+    : { 'Формовка':'формовка S2','Сварка':'сварка S2','Сборка':'сборка S2','Полиуретан':null,'Кузовная':'кузовная S2' };
+  let rows = '';
+  Object.entries(tabMap).forEach(([label, sheetName]) => {
+    if (!sheetName) {
+      rows += `<div class="area-row" style="opacity:.4;cursor:default">
+        <span class="area-name">${label} ${proj}</span>
+        <div class="area-prog-wrap"><div class="area-prog-track"><div class="area-prog-fill fill-gray" style="width:0%" data-w="0%"></div></div><span class="area-pct">—</span></div>
+        <span class="area-status status-go" style="background:var(--surface2);color:var(--text-hint)">Нет листа</span>
+        <span class="area-count">—</span>
+      </div>`; return;
+    }
+    const sheet  = areas[sheetName];
+    const pcts   = sheet && sheet.progress ? units.map(u => sheet.progress[u] ? sheet.progress[u].pct : 0) : [];
+    const pct    = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : null;
+    const pctNum = pct !== null ? pct : 0;
+    const tabKey = {'Формовка':'formovka','Сварка':'svarka','Сборка':'sborka','Полиуретан':'poliuretan','Кузовная':'kuzov'}[label];
+    rows += `<div class="area-row" onclick="goToTab('${tabKey}','${cls}')">
+      <span class="area-name">${label} ${proj}</span>
+      <div class="area-prog-wrap">
+        <div class="area-prog-track"><div class="area-prog-fill ${fillCls(pctNum)}" style="width:0%" data-w="${pctNum}%"></div></div>
+        <span class="area-pct">${pct !== null ? pctNum+'%' : '—'}</span>
+      </div>
+      ${statusBadge(pctNum, pct === null)}
+      <span class="area-count">${units.length} ед.</span>
+    </div>`;
+  });
+  return `<div class="project-block">
+    <div class="project-head">
+      <div class="project-name-wrap"><span class="project-pill pill-${cls}">${proj}</span><span class="project-title">Проект ${proj}</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;color:var(--text-sec)">Единиц:</span><span style="font-size:14px;font-weight:500">${units.length}</span></div>
+    </div>
+    <div class="units-strip">${units.map(u=>`<span class="unit-chip ${cls}">${u}</span>`).join('')}</div>
+    <div class="area-col-header"><span>Участок</span><span>Прогресс</span><span class="col-right">Статус</span><span class="col-right">Ед.</span></div>
+    <div>${rows}</div>
+  </div>`;
+}
+
+function renderDetail(tab, proj) {
+  const sheets    = TAB_SHEETS[tab];
+  const tabLabels = { formovka:'Формовка', svarka:'Сварка', sborka:'Сборка', poliuretan:'Полиуретан', kuzov:'Кузовная' };
+  const tabLabel  = tabLabels[tab] || tab;
+  const hasT8 = !!(sheets && sheets.t8);
+  const hasS2 = !!(sheets && sheets.s2);
+  const groupMode = currentGroupMode[tab] || 'node';
+  const sheetName = sheets && sheets[proj];
+  const detail    = sheetName && detailCache[sheetName];
+  const hasPostData = detail && detail.rows && detail.rows.some(r => r.post);
+  let switcher = `<div style="display:flex;align-items:center;gap:10px"><div class="proj-switcher">`;
+  if (hasT8) switcher += `<button class="proj-btn ${proj==='t8'?'active t8':''}" onclick="switchProj('${tab}','t8')">T8</button>`;
+  if (hasS2) switcher += `<button class="proj-btn ${proj==='s2'?'active s2':''}" onclick="switchProj('${tab}','s2')">S2</button>`;
+  switcher += `</div><div class="group-toggle">
+    <button class="group-btn ${groupMode==='node'?'active':''}" onclick="switchGroup('${tab}','node')">По узлам</button>
+    ${hasPostData ? `<button class="group-btn ${groupMode==='post'?'active':''}" onclick="switchGroup('${tab}','post')">По постам</button>` : ''}
+    <button class="group-btn ${groupMode==='gantt'?'active':''}" onclick="switchGroup('${tab}','gantt')">Гант</button>
+  </div></div>`;
+  let html = `<div class="detail-wrap">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+      <div><div class="detail-title">${tabLabel}</div>
+      <div class="detail-sub">${sheetName||'—'}${detail ? ` · ${detail.totalRows} операций · ${detail.filledRows} заполнено` : ''}</div></div>
+      ${switcher}
+    </div>`;
+  if (!sheetName) { html += `<div class="state-msg">Нет листа для ${proj.toUpperCase()}</div></div>`; return html; }
+  if (!detail)    { html += `<div class="big-loading"><span class="loader"></span><div class="big-loading-text">Загрузка...</div></div></div>`; return html; }
+  if (detail.error) { html += `<div class="state-msg" style="color:var(--red)">${detail.error}</div></div>`; return html; }
+
+  const units   = detail.units || [];
+  const chipCls = proj === 't8' ? 't8' : 's2';
+  const pf      = detail.hasPlanFact;
+
+  // ── Мини-Гант: единица × время на этом участке ──────────
+  const parseDP = s => {
+    if (!s) return null;
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    return m ? new Date(+m[3], +m[2]-1, +m[1]) : null;
+  };
+  function fmtShortD(s) {
+    if (!s) return '—';
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    return m ? `${m[1]}.${m[2]}.${m[3].slice(2)}` : s;
+  }
+  function minDP(a,b){ const da=parseDP(a),db=parseDP(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da<=db?a:b; }
+  function maxDP(a,b){ const da=parseDP(a),db=parseDP(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da>=db?a:b; }
+
+  // Собираем min/max дат по каждой единице в этом участке
+  const unitRangesD = {};
+  units.forEach(u => {
+    let sp='',ep='',sf='',ef='';
+    detail.rows.forEach(row => {
+      const d = row.dates && row.dates[u];
+      if (!d) return;
+      if (detail.hasStartEnd) {
+        if (d.startPlan) sp = minDP(sp,d.startPlan)||d.startPlan;
+        if (d.endPlan)   ep = maxDP(ep,d.endPlan)||d.endPlan;
+        if (d.startFact) sf = minDP(sf,d.startFact)||d.startFact;
+        if (d.endFact)   ef = maxDP(ef,d.endFact)||d.endFact;
+      } else if (detail.hasPlanFact) {
+        if (d.plan) { sp=minDP(sp,d.plan)||d.plan; ep=maxDP(ep,d.plan)||d.plan; }
+        if (d.fact) { sf=minDP(sf,d.fact)||d.fact; ef=maxDP(ef,d.fact)||d.fact; }
+      } else {
+        if (d) { sp=minDP(sp,d)||d; ep=maxDP(ep,d)||d; }
+      }
+    });
+    if (sp||ep) unitRangesD[u] = { sp,ep,sf,ef };
+  });
+
+  const unitsD = units.filter(u => unitRangesD[u]);
+  let miniGanttHtml = '';
+
+  if (unitsD.length) {
+    // Глобальный диапазон шкалы
+    let gMinD='',gMaxD='';
+    unitsD.forEach(u => {
+      const r=unitRangesD[u];
+      if (r.sp) gMinD=minDP(gMinD,r.sp)||r.sp;
+      if (r.ep) gMaxD=maxDP(gMaxD,r.ep)||r.ep;
+      if (r.sf) gMinD=minDP(gMinD,r.sf)||r.sf;
+      if (r.ef) gMaxD=maxDP(gMaxD,r.ef)||r.ef;
+    });
+    const dMinD0=parseDP(gMinD), dMaxD0=parseDP(gMaxD);
+    const dMinD = dMinD0 ? new Date(dMinD0.getFullYear(),dMinD0.getMonth(),1) : null;
+    const dMaxD = dMaxD0 ? new Date(dMaxD0.getFullYear(),dMaxD0.getMonth()+1,0) : null;
+    const totalD = (dMinD&&dMaxD) ? Math.round((dMaxD-dMinD)/86400000)+1 : 0;
+    const todayD = new Date(); todayD.setHours(0,0,0,0);
+
+    function toPctD(s) {
+      if (!totalD||!dMinD) return null;
+      const d=parseDP(s); if (!d) return null;
+      return Math.max(0,Math.min(100,(d-dMinD)/86400000/totalD*100));
+    }
+    function todayStrD() {
+      return String(todayD.getDate()).padStart(2,'0')+'.'+String(todayD.getMonth()+1).padStart(2,'0')+'.'+todayD.getFullYear();
+    }
+    const todayPctD = toPctD(todayStrD());
+
+    // Шкала месяцев
+    const MR = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+    let monthsD='';
+    if (dMinD&&dMaxD) {
+      let cur=new Date(dMinD);
+      while(cur<=dMaxD){
+        const ds=String(cur.getDate()).padStart(2,'0')+'.'+String(cur.getMonth()+1).padStart(2,'0')+'.'+cur.getFullYear();
+        const p=toPctD(ds);
+        const nxt=new Date(cur.getFullYear(),cur.getMonth()+1,1);
+        const eom=new Date(Math.min(nxt-1,dMaxD));
+        const ds2=String(eom.getDate()).padStart(2,'0')+'.'+String(eom.getMonth()+1).padStart(2,'0')+'.'+eom.getFullYear();
+        const p2=toPctD(ds2);
+        const w=Math.max(0,(p2||0)-(p||0)+(100/totalD));
+        if(p!==null) monthsD+=`<div style="position:absolute;left:${p}%;width:${w}%;border-left:1px solid var(--border);padding-left:5px;font-size:9.5px;color:var(--text-hint);white-space:nowrap;overflow:hidden;height:100%;display:flex;align-items:center">${MR[cur.getMonth()]} ${String(cur.getFullYear()).slice(2)}</div>`;
+        cur=nxt;
+      }
+    }
+
+    const isT8 = proj==='t8';
+    const planClr = '#93c5fd';
+    const factClr = '#22c55e';
+    const textClr = isT8?'#1e3a8a':'#14532d';
+    const bgClr   = isT8?'#eff4ff':'#f0fdf4';
+    const LW = 110;
+
+    const unitRows = unitsD.map(u => {
+      const r=unitRangesD[u];
+      const spP=toPctD(r.sp), epP=toPctD(r.ep);
+      const sfP=toPctD(r.sf), efP=toPctD(r.ef);
+      const hasPlan=spP!==null&&epP!==null;
+      const hasFact=sfP!==null&&efP!==null;
+      const pw=hasPlan?Math.max(1,epP-spP):0;
+      const fw=hasFact?Math.max(1,efP-sfP):0;
+      const todayLine=todayPctD!==null?`<div style="position:absolute;left:${todayPctD}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:.4;z-index:5"></div>`:'';
+
+      // Отклонение
+      const dp=parseDP(r.ep), df=parseDP(r.ef);
+      const dev = (dp&&df) ? Math.round((df-dp)/86400000) : null;
+      const devHtml = dev!==null ? `<span style="font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;background:${dev>0?'#fee2e2':dev<0?'#dcfce7':'#f0fdf4'};color:${dev>0?'#dc2626':dev<0?'#16a34a':'#16a34a'};margin-left:4px">${dev>0?'+':''}${dev}д</span>` : '';
+
+      return `<div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border)">
+        <!-- Левая колонка -->
+        <div style="width:${LW}px;min-width:${LW}px;padding:10px 12px;border-right:0.5px solid var(--border-med);display:flex;flex-direction:column;justify-content:center;gap:3px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:5px;background:${bgClr};color:${textClr}">${u}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-hint)">${fmtShortD(r.sp||r.sf)} → ${fmtShortD(r.ep||r.ef)}${devHtml}</div>
+        </div>
+        <!-- Гант -->
+        <div style="flex:1;position:relative;padding:10px 0;overflow:hidden">
+          ${todayLine}
+          ${hasPlan?`<div title="План: ${fmtShortD(r.sp)} — ${fmtShortD(r.ep)}" style="position:absolute;left:${spP}%;width:${pw}%;top:10px;height:14px;background:${planClr};border-radius:4px;z-index:1;display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:${textClr};font-weight:500;white-space:nowrap;overflow:hidden;padding:0 4px;opacity:.8">${pw>8?'план':''}</span></div>`:''}
+          ${hasFact?`<div title="Факт: ${fmtShortD(r.sf)} — ${fmtShortD(r.ef)}" style="position:absolute;left:${sfP}%;width:${fw}%;top:28px;height:14px;background:${factClr};border-radius:4px;z-index:2;display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;padding:0 4px;opacity:.9">${fw>8?'факт':''}</span></div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    miniGanttHtml = `<div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);overflow:hidden;margin-bottom:14px">
+      <!-- Шапка -->
+      <div style="display:flex;border-bottom:1px solid var(--border-med)">
+        <div style="width:${LW}px;min-width:${LW}px;padding:6px 12px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-hint);border-right:0.5px solid var(--border-med)">Единица</div>
+        <div style="flex:1;position:relative;height:30px">${monthsD}</div>
+      </div>
+      ${unitRows}
+      <!-- Легенда -->
+      <div style="display:flex;gap:14px;padding:6px 12px;border-top:0.5px solid var(--border);align-items:center">
+        <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-sec)"><div style="width:18px;height:8px;border-radius:2px;background:${planClr}"></div>План</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-sec)"><div style="width:18px;height:8px;border-radius:2px;background:${factClr}"></div>Факт</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-sec)"><div style="width:2px;height:12px;background:#ef4444;opacity:.5;border-radius:1px"></div>Сегодня</div>
+      </div>
+    </div>`;
+  }
+
+  if (groupMode === 'gantt') {
+    // Собираем данные по ВСЕМ единицам из обоих листов этого участка
+    const allSheets = TAB_SHEETS[tab] || {};
+    const allUnitsForGantt = [...UNITS_T8, ...UNITS_S2];
+
+    function minDG(a,b){ const da=parseDP(a),db=parseDP(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da<=db?a:b; }
+    function maxDG(a,b){ const da=parseDP(a),db=parseDP(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da>=db?a:b; }
+
+    const unitRangesG = {};
+    Object.entries(allSheets).forEach(([projKey, sName]) => {
+      if (!sName) return;
+      const det = detailCache[sName];
+      if (!det || !det.rows) return;
+      const detUnits = det.units || [];
+      detUnits.forEach(u => {
+        if (!unitRangesG[u]) unitRangesG[u] = { sp:'',ep:'',sf:'',ef:'' };
+        const r = unitRangesG[u];
+        det.rows.forEach(row => {
+          const d = row.dates && row.dates[u];
+          if (!d) return;
+          if (det.hasStartEnd) {
+            if (d.startPlan) r.sp = minDG(r.sp,d.startPlan)||d.startPlan;
+            if (d.endPlan)   r.ep = maxDG(r.ep,d.endPlan)||d.endPlan;
+            if (d.startFact) r.sf = minDG(r.sf,d.startFact)||d.startFact;
+            if (d.endFact)   r.ef = maxDG(r.ef,d.endFact)||d.endFact;
+          } else if (det.hasPlanFact) {
+            if (d.plan) { r.sp=minDG(r.sp,d.plan)||d.plan; r.ep=maxDG(r.ep,d.plan)||d.plan; }
+            if (d.fact) { r.sf=minDG(r.sf,d.fact)||d.fact; r.ef=maxDG(r.ef,d.fact)||d.fact; }
+          }
+        });
+      });
+    });
+
+    const unitsG = allUnitsForGantt.filter(u => unitRangesG[u] && (unitRangesG[u].sp || unitRangesG[u].ep));
+    if (!unitsG.length) {
+      html += `<div class="state-msg">Нет данных — загрузите оба проекта</div></div>`;
+      return html;
+    }
+
+    // Глобальный диапазон
+    let gMinG='', gMaxG='';
+    unitsG.forEach(u => {
+      const r=unitRangesG[u];
+      if (r.sp) gMinG=minDG(gMinG,r.sp)||r.sp;
+      if (r.ep) gMaxG=maxDG(gMaxG,r.ep)||r.ep;
+      if (r.sf) gMinG=minDG(gMinG,r.sf)||r.sf;
+      if (r.ef) gMaxG=maxDG(gMaxG,r.ef)||r.ef;
+    });
+    const dMinG0=parseDP(gMinG), dMaxG0=parseDP(gMaxG);
+    const dMinG = dMinG0 ? new Date(dMinG0.getFullYear(),dMinG0.getMonth(),1) : null;
+    const dMaxG = dMaxG0 ? new Date(dMaxG0.getFullYear(),dMaxG0.getMonth()+1,0) : null;
+    const totalDG = (dMinG&&dMaxG) ? Math.round((dMaxG-dMinG)/86400000)+1 : 0;
+    const todayG = new Date(); todayG.setHours(0,0,0,0);
+
+    function toPctG(s) {
+      if (!totalDG||!dMinG) return null;
+      const d=parseDP(s); if (!d) return null;
+      return Math.max(0,Math.min(100,(d-dMinG)/86400000/totalDG*100));
+    }
+    function fmtG(s) { if(!s)return'—'; const m=s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m?`${m[1]}.${m[2]}.${m[3].slice(2)}`:s; }
+
+    const MRG = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+    let monthTicksG = '';
+    if (dMinG&&dMaxG) {
+      let cur=new Date(dMinG);
+      while(cur<=dMaxG){
+        const ds=String(cur.getDate()).padStart(2,'0')+'.'+String(cur.getMonth()+1).padStart(2,'0')+'.'+cur.getFullYear();
+        const p=toPctG(ds);
+        const nxt=new Date(cur.getFullYear(),cur.getMonth()+1,1);
+        const eom=new Date(Math.min(nxt-1,dMaxG));
+        const ds2=String(eom.getDate()).padStart(2,'0')+'.'+String(eom.getMonth()+1).padStart(2,'0')+'.'+eom.getFullYear();
+        const p2=toPctG(ds2);
+        const w=Math.max(0,(p2||0)-(p||0)+(100/totalDG));
+        if(p!==null) monthTicksG+=`<div style="position:absolute;left:${p}%;width:${w}%;border-left:1px solid var(--border);padding-left:5px;font-size:9.5px;color:var(--text-hint);white-space:nowrap;overflow:hidden;height:100%;display:flex;align-items:center">${MRG[cur.getMonth()]} ${String(cur.getFullYear()).slice(2)}</div>`;
+        cur=nxt;
+      }
+    }
+
+    const todayPctG = toPctG(String(todayG.getDate()).padStart(2,'0')+'.'+String(todayG.getMonth()+1).padStart(2,'0')+'.'+todayG.getFullYear());
+    const todayLineG = todayPctG!==null ? `<div style="position:absolute;left:${todayPctG}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:.4;z-index:5;pointer-events:none"></div>` : '';
+    const LWG = 120;
+
+    // T8 строки потом S2
+    const makeSection = (sectionUnits, isT8) => {
+      const planC = '#93c5fd', factC = '#22c55e';
+      const textC = isT8?'#1e3a8a':'#14532d', bgC = isT8?'#eff4ff':'#f0fdf4';
+      return sectionUnits.filter(u=>unitRangesG[u]).map(u => {
+        const r=unitRangesG[u];
+        const spP=toPctG(r.sp),epP=toPctG(r.ep),sfP=toPctG(r.sf),efP=toPctG(r.ef);
+        const hasPlan=spP!==null&&epP!==null, hasFact=sfP!==null&&efP!==null;
+        const pw=hasPlan?Math.max(0.5,epP-spP):0, fw=hasFact?Math.max(0.5,efP-sfP):0;
+        const dp=parseDP(r.ep),df=parseDP(r.ef);
+        const dev=dp&&df?Math.round((df-dp)/86400000):null;
+        const devHtml=dev!==null?` <span style="font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;background:${dev>0?'#fee2e2':'#dcfce7'};color:${dev>0?'#dc2626':'#16a34a'}">${dev>0?'+':''}${dev}д</span>`:'';
+        return `<div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border)" onmouseenter="this.style.background='#fafaf9'" onmouseleave="this.style.background=''">
+          <div style="width:${LWG}px;min-width:${LWG}px;padding:8px 12px;border-right:0.5px solid var(--border-med);display:flex;flex-direction:column;justify-content:center;gap:3px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px;background:${bgC};color:${textC}">${u}</span>
+            </div>
+            <div style="font-size:10px;color:var(--text-hint)">${fmtG(r.sp)} → ${fmtG(r.ep)}${devHtml}</div>
+          </div>
+          <div style="flex:1;position:relative;overflow:hidden">
+            ${todayLineG}
+            ${hasPlan?`<div style="position:absolute;left:${spP}%;width:${pw}%;top:10px;height:12px;background:${planC};border-radius:3px;z-index:1"></div>`:''}
+            ${hasFact?`<div style="position:absolute;left:${sfP}%;width:${fw}%;top:26px;height:12px;background:${factC};border-radius:3px;z-index:2"></div>`:''}
+          </div>
+        </div>`;
+      }).join('');
+    };
+
+    const t8rows = makeSection(UNITS_T8, true);
+    const s2rows = makeSection(UNITS_S2, false);
+
+    html += `<div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);overflow:hidden">
+      <div style="display:flex;border-bottom:1px solid var(--border-med)">
+        <div style="width:${LWG}px;min-width:${LWG}px;padding:6px 12px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-hint);border-right:0.5px solid var(--border-med)">Единица</div>
+        <div style="flex:1;position:relative;height:28px">${monthTicksG}</div>
+      </div>
+      ${t8rows?`<div style="padding:4px 12px;background:var(--surface2);border-bottom:0.5px solid var(--border);font-size:10px;font-weight:700;color:#1e3a8a;letter-spacing:.05em">T8</div>${t8rows}`:''}
+      ${s2rows?`<div style="padding:4px 12px;background:var(--surface2);border-bottom:0.5px solid var(--border);font-size:10px;font-weight:700;color:#14532d;letter-spacing:.05em">S2</div>${s2rows}`:''}
+      <div style="display:flex;gap:12px;padding:6px 12px;border-top:0.5px solid var(--border);align-items:center">
+        <div style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-sec)"><div style="width:16px;height:7px;border-radius:2px;background:#93c5fd"></div>План</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-sec)"><div style="width:16px;height:7px;border-radius:2px;background:#22c55e"></div>Факт</div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-sec)"><div style="width:2px;height:11px;background:#ef4444;opacity:.5;border-radius:1px"></div>Сегодня</div>
+        ${Object.values(allSheets).filter(Boolean).some(s=>!detailCache[s])?`<span style="font-size:10.5px;color:var(--text-hint);margin-left:4px">⚠ Загрузите оба проекта для полной картины</span>`:''}
+      </div>
+    </div>`;
+
+    html += `</div>`;
+    return html;
+  }
+
+  // Группируем строки по узлу или по посту
+  const groups = [];
+  if (groupMode === 'post') {
+    // Объединяем ВСЕ строки с одинаковым постом (не sequential, а по ключу)
+    const POST_ORDER = [
+      'Пост кузовной сборки',
+      'Кузовной пост',
+      'Сборочный пост 1',
+      'Пост 1',
+      'Сборочный пост 2',
+      'Пост 2',
+      'Сборочный пост 3',
+      'Пост 3',
+      'Сборочный пост 4',
+      'Пост 4',
+      'Пост электрики',
+      'Агрегатный пост',
+      'Слесарный пост',
+    ];
+    const postMap = new Map();
+    detail.rows.forEach(row => {
+      const p = row.post || '—';
+      if (!postMap.has(p)) postMap.set(p, { num: '', name: p, rows: [], isPost: true });
+      postMap.get(p).rows.push(row);
+    });
+    // Сначала посты из POST_ORDER, потом остальные в порядке появления
+    const sorted = [
+      ...POST_ORDER.filter(p => postMap.has(p)),
+      ...[...postMap.keys()].filter(p => !POST_ORDER.includes(p)),
+    ];
+    sorted.forEach(p => groups.push(postMap.get(p)));
+  } else {
+    // Группировка по узлу (дефолт)
+    // flat=true строки — показываем без группировки, как отдельный элемент
+    detail.rows.forEach(row => {
+      if (row.flat) {
+        groups.push({ num: row.num || '', name: '', rows: [row], flat: true });
+        return;
+      }
+      const g = row.group || '';
+      const last = groups[groups.length - 1];
+      if (!last || last.flat || last.name !== g) groups.push({ num: row.num || '', name: g, rows: [] });
+      groups[groups.length - 1].rows.push(row);
+    });
+  }
+
+  function parseDate(s) {
+    if (!s) return null;
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+    return null;
+  }
+  function maxDate(a, b) {
+    const da = parseDate(a), db = parseDate(b);
+    if (!da && !db) return '';
+    if (!da) return b; if (!db) return a;
+    return da >= db ? a : b;
+  }
+  function aggregateGroup(rows) {
+    const kds = rows.map(r => r.kd || '');
+    const kdEmpty = kds.some(k => !k);
+    let kdAgg = kdEmpty ? 'нет' : kds.reduce((acc,v) => maxDate(acc,v)||acc||v, '');
+    const subs = [...new Set(rows.map(r=>r.sub||'').filter(Boolean))];
+    const datesAgg = {};
+    units.forEach(u => {
+      if (se) {
+        // Проверяем: у всех ли операций есть startFact И endFact
+        const allDone = rows.every(r => {
+          const d = (r.dates && r.dates[u]) || {};
+          return d.startFact && d.endFact;
+        });
+
+        let startPlanAgg='', startFactAgg='', endPlanAgg='', endFactAgg='';
+
+        if (allDone) {
+          // Все завершены — берём min факт старт и max факт конец
+          rows.forEach(r => {
+            const d = (r.dates && r.dates[u]) || {};
+            // min startFact
+            if (!startFactAgg) startFactAgg = d.startFact;
+            else { const a=parseDate(d.startFact),b=parseDate(startFactAgg); if(a&&b&&a.getTime()<b.getTime()) startFactAgg=d.startFact; }
+            // max endFact
+            endFactAgg = maxDate(endFactAgg, d.endFact) || endFactAgg || d.endFact;
+          });
+          startPlanAgg = startFactAgg; // в режиме "все выполнено" показываем факт
+          endPlanAgg   = endFactAgg;
+        } else {
+          // Не все — план: min startPlan, max endPlan; факт: min startFact, max endFact
+          rows.forEach(r => {
+            const d = (r.dates && r.dates[u]) || {};
+            // min startPlan
+            if (d.startPlan) {
+              if (!startPlanAgg) startPlanAgg = d.startPlan;
+              else { const a=parseDate(d.startPlan),b=parseDate(startPlanAgg); if(a&&b&&a.getTime()<b.getTime()) startPlanAgg=d.startPlan; }
+            }
+            // min startFact
+            if (d.startFact) {
+              if (!startFactAgg) startFactAgg = d.startFact;
+              else { const a=parseDate(d.startFact),b=parseDate(startFactAgg); if(a&&b&&a.getTime()<b.getTime()) startFactAgg=d.startFact; }
+            }
+            // max endPlan
+            endPlanAgg = maxDate(endPlanAgg, d.endPlan) || endPlanAgg || d.endPlan || '';
+            // max endFact
+            endFactAgg = maxDate(endFactAgg, d.endFact) || endFactAgg || d.endFact || '';
+          });
+        }
+
+        // Отклонение по конечной дате
+        const dev = (() => {
+          if (!endPlanAgg || !endFactAgg) return null;
+          const dp = parseDate(endPlanAgg), df = parseDate(endFactAgg);
+          if (!dp || !df) return null;
+          return Math.round((df - dp) / 86400000);
+        })();
+
+        datesAgg[u] = { startPlan: startPlanAgg, startFact: startFactAgg, endPlan: endPlanAgg, endFact: endFactAgg, deviation: dev, allDone };
+      } else if (pf) {
+        let maxPlan='', maxFact='';
+        rows.forEach(r => {
+          const d=(r.dates&&r.dates[u])||{};
+          maxPlan = maxDate(maxPlan,d.plan||'')||maxPlan||d.plan||'';
+          maxFact = maxDate(maxFact,d.fact||'')||maxFact||d.fact||'';
+        });
+        datesAgg[u] = { plan:maxPlan, fact:maxFact };
+      } else {
+        let maxV='';
+        rows.forEach(r => { maxV = maxDate(maxV,(r.dates&&r.dates[u])||'')||maxV; });
+        datesAgg[u] = maxV;
+      }
+    });
+    return { kd:kdAgg, sub:subs.join(', '), dates:datesAgg };
+  }
+
+  const se     = detail.hasStartEnd;
+  const hasKD  = detail.rows.some(r => r.kd);
+  const hasSub = detail.rows.some(r => r.sub);
+  const hasPost = detail.rows.some(r => r.post);
+  const hasWear      = detail.hasWear      && detail.rows.some(r => r.wear);
+  const hasMoralWear = detail.hasMoralWear && detail.rows.some(r => r.moralWear);
+  const hasMdf1      = detail.hasMdf1      && detail.rows.some(r => r.mdf1);
+  const hasMdf2      = detail.hasMdf2      && detail.rows.some(r => r.mdf2);
+  // На формовке колонка «#» не нужна — там номер не несёт смысла для узла
+  const hasNum = tab !== 'formovka';
+  const leftCols = (hasNum?1:0) + 1 + (hasPost?1:0) + (hasWear?1:0) + (hasMoralWear?1:0) + (hasMdf1?1:0) + (hasMdf2?1:0) + (hasKD?1:0) + (hasSub?1:0);
+
+  // Фиксируем суммарную ширину левого блока = 640px на всех листах
+  // #=34, пост=110, КД=80/90, субподряд=130 → operationWidth = остаток
+  const TOTAL_LEFT = 640;
+  const fixedCols = (hasNum?34:0) + (hasPost?150:0) + (hasWear?110:0) + (hasMoralWear?110:0) + (hasMdf1?110:0) + (hasMdf2?110:0) + (hasKD?(se?80:90):0) + (hasSub?(se?130:150):0);
+  const opWidth = Math.max(200, TOTAL_LEFT - fixedCols);
+  const dateCols = se ? units.length * 4 : pf ? units.length * 2 : units.length;
+
+  let unitHeaderCells = `<th colspan="${leftCols}"></th>`;
+  if (se) {
+    unitHeaderCells += units.map(u=>
+      `<th class="center" colspan="4" style="border-left:1.5px solid var(--border-med)">${u}</th>`
+    ).join('');
+  } else if (pf) {
+    unitHeaderCells += units.map(u=>
+      `<th class="center" colspan="2" style="border-left:1.5px solid var(--border-med)">${u}</th>`
+    ).join('');
+  } else {
+    unitHeaderCells += units.map(u=>`<th class="center">${u}</th>`).join('');
+  }
+
+  // Строим шапку
+  let thead = '';
+  if (se) {
+    // Строка 1: единицы (colspan=4 каждая)
+    const row1 = `<tr class="unit-header-row">
+      <th colspan="${leftCols}"></th>
+      ${units.map(u => `<th class="center" colspan="4" style="border-left:1.5px solid var(--border-med)">${u}</th>`).join('')}
+    </tr>`;
+    // Строка 2: Старт | Конец (colspan=2 каждая)
+    const row2 = `<tr>
+      <th colspan="${leftCols}"></th>
+      ${units.map(() => `
+        <th class="center" colspan="2" style="border-left:1.5px solid var(--border-med);background:var(--amber-bg);color:var(--amber);font-size:10px">Старт</th>
+        <th class="center" colspan="2" style="background:var(--blue-bg);color:var(--blue);font-size:10px">Конец</th>
+      `).join('')}
+    </tr>`;
+    // Строка 3: План | Факт | План | Факт
+    const row3 = `<tr>
+      ${hasNum ? `<th class="col-num">#</th>` : ''}
+      <th>Наименование узла / Операция</th>
+      ${hasPost ? `<th style="width:150px">Пост</th>` : ''}
+      ${hasWear      ? `<th style="width:110px">Физ. износ</th>` : ''}
+      ${hasMoralWear ? `<th style="width:110px">Мор. износ</th>` : ''}
+      ${hasMdf1 ? `<th style="width:110px">Склейка МДФ</th>` : ''}
+      ${hasMdf2 ? `<th style="width:110px">Матрица МДФ</th>` : ''}
+      ${hasKD  ? `<th class="center">КД</th>` : ''}
+      ${hasSub ? `<th>Субподряд</th>` : ''}
+      ${units.map(() => `
+        <th class="center pf-plan" style="border-left:1.5px solid var(--border-med)">план</th>
+        <th class="center pf-fact" >факт</th>
+        <th class="center pf-plan" >план</th>
+        <th class="center pf-fact" >факт</th>
+      `).join('')}
+    </tr>`;
+    thead = row1 + row2 + row3;
+  } else if (pf) {
+    thead = `<tr class="unit-header-row">
+      <th colspan="${leftCols}"></th>
+      ${units.map(u => `<th class="center" colspan="2" style="border-left:1.5px solid var(--border-med)">${u}</th>`).join('')}
+    </tr>
+    <tr>
+      ${hasNum ? `<th class="col-num">#</th>` : ''}
+      <th>Наименование узла / Операция</th>
+      ${hasPost ? `<th style="width:150px">Пост</th>` : ''}
+      ${hasWear      ? `<th style="width:110px">Физ. износ</th>` : ''}
+      ${hasMoralWear ? `<th style="width:110px">Мор. износ</th>` : ''}
+      ${hasMdf1 ? `<th style="width:110px">Склейка МДФ</th>` : ''}
+      ${hasMdf2 ? `<th style="width:110px">Матрица МДФ</th>` : ''}
+      ${hasKD  ? `<th class="center">КД</th>` : ''}
+      ${hasSub ? `<th>Субподряд</th>` : ''}
+      ${units.map(() => `<th class="center pf-plan">план</th><th class="center pf-fact">факт</th>`).join('')}
+    </tr>`;
+  } else {
+    thead = `<tr class="unit-header-row">
+      <th colspan="${leftCols}"></th>
+      ${units.map(u => `<th class="center">${u}</th>`).join('')}
+    </tr>
+    <tr>
+      ${hasNum ? `<th class="col-num">#</th>` : ''}
+      <th>Наименование узла / Операция</th>
+      ${hasPost ? `<th style="width:150px">Пост</th>` : ''}
+      ${hasWear      ? `<th style="width:110px">Физ. износ</th>` : ''}
+      ${hasMoralWear ? `<th style="width:110px">Мор. износ</th>` : ''}
+      ${hasMdf1 ? `<th style="width:110px">Склейка МДФ</th>` : ''}
+      ${hasMdf2 ? `<th style="width:110px">Матрица МДФ</th>` : ''}
+      ${hasKD  ? `<th class="center">КД</th>` : ''}
+      ${hasSub ? `<th>Субподряд</th>` : ''}
+      ${units.map(() => `<th class="center">дата</th>`).join('')}
+    </tr>`;
+  }
+
+  // Датные колонки фиксированы в px, операция берёт остаток
+  const DATE_COL_W = 88; // px — минимально читаемая ширина
+  const dateColCount = se ? units.length * 4 : pf ? units.length * 2 : units.length;
+
+  let colgroup = `<colgroup>
+    ${hasNum ? `<col style="width:34px">` : ''}
+    <col style="min-width:280px">
+
+    ${hasPost ? `<col style="width:150px">` : ''}
+    ${hasWear      ? `<col style="width:110px">` : ''}
+    ${hasMoralWear ? `<col style="width:110px">` : ''}
+    ${hasMdf1 ? `<col style="width:110px">` : ''}
+    ${hasMdf2 ? `<col style="width:110px">` : ''}
+    ${hasKD   ? `<col style="width:82px">` : ''}
+    ${hasSub  ? `<col style="width:132px">` : ''}`;
+  for (let i = 0; i < dateColCount; i++) {
+    colgroup += `<col style="width:${DATE_COL_W}px">`;
+  }
+  colgroup += `</colgroup>`;
+
+  html += `<div class="detail-table-wrap"><table class="detail-table" style="table-layout:fixed;width:100%">
+    ${colgroup}
+    <thead>${thead}</thead>
+    <tbody>`;
+
+  // Хелпер: строки дат для строки операции
+  function opDateCells(row) {
+    const sr = row.sourceRow || '';
+    const mode = window.EDIT_MODE || 'plan'; // 'plan' (директор) или 'fact' (мастер)
+    const planCell = (field, val) =>
+      mode === 'plan'
+        ? `class="col-date plan-cell" data-sheet="${esc(sheetName)}" data-row="${sr}" data-unit="UNIT" data-field="${field}" data-current="${esc(val||'')}" ondblclick="startPlanEdit(this)" title="Двойной клик — изменить план"`
+        : `class="col-date"`;
+    const factCell = (field, val) =>
+      mode === 'fact'
+        ? `class="col-date fact-cell" data-sheet="${esc(sheetName)}" data-row="${sr}" data-unit="UNIT" data-field="${field}" data-current="${esc(val||'')}" ondblclick="startFactEdit(this)" title="Двойной клик — отметить факт"`
+        : `class="col-date"`;
+    return se
+      ? units.map(u => {
+          const d=(row.dates&&row.dates[u])||{};
+          const dev = d.deviation;
+          const devHtml = dev !== null && dev !== undefined
+            ? `<span style="font-size:10px;margin-left:3px;color:${dev>0?'var(--red)':dev<0?'var(--green)':'var(--text-hint)'}">${dev>0?'+':''}${dev}д</span>` : '';
+          return `<td ${planCell('startPlan', d.startPlan).replace('UNIT', esc(u))} style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.startPlan||'')}</td>
+                  <td ${factCell('startFact', d.startFact).replace('UNIT', esc(u))}>${renderFactBadge(d.startFact||'',d.startPlan||'')}</td>
+                  <td ${planCell('endPlan', d.endPlan).replace('UNIT', esc(u))}>${renderPlanBadge(d.endPlan||'')}</td>
+                  <td ${factCell('endFact', d.endFact).replace('UNIT', esc(u))}>${renderFactBadge(d.endFact||'',d.endPlan||'')}${devHtml}</td>`;
+        }).join('')
+      : pf
+      ? units.map(u => {
+          const d=(row.dates&&row.dates[u])||{};
+          return `<td ${planCell('plan', d.plan).replace('UNIT', esc(u))} style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.plan||'')}</td>
+                  <td ${factCell('fact', d.fact).replace('UNIT', esc(u))}>${renderFactBadge(d.fact||'',d.plan||'')}</td>`;
+        }).join('')
+      : units.map(u=>`<td class="col-date">${renderDateBadge((row.dates&&row.dates[u])||'')}</td>`).join('');
+  }
+
+  // Хелпер: строки дат для агрегированной группы
+  function aggDateCells(agg) {
+    return se
+      ? units.map(u => {
+          const d=agg.dates[u]||{};
+          const dev = d.deviation;
+          const devHtml = dev !== null && dev !== undefined
+            ? `<span style="font-size:10px;margin-left:3px;color:${dev>0?'var(--red)':dev<0?'var(--green)':'var(--text-hint)'}">${dev>0?'+':''}${dev}д</span>` : '';
+          return `<td class="col-date" style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.startPlan||'')}</td>
+                  <td class="col-date">${renderFactBadge(d.startFact||'',d.startPlan||'')}</td>
+                  <td class="col-date">${renderPlanBadge(d.endPlan||'')}</td>
+                  <td class="col-date">${renderFactBadge(d.endFact||'',d.endPlan||'')}${devHtml}</td>`;
+        }).join('')
+      : pf
+      ? units.map(u => {
+          const d=agg.dates[u]||{};
+          return `<td class="col-date" style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.plan||'')}</td>
+                  <td class="col-date">${renderFactBadge(d.fact||'',d.plan||'')}</td>`;
+        }).join('')
+      : units.map(u=>`<td class="col-date">${renderDateBadge(agg.dates[u]||'')}</td>`).join('');
+  }
+
+  let rowIdx = 0; // глобальный счётчик для уникальных gid
+
+  groups.forEach((group) => {
+    const gid = `g_${rowIdx++}`;
+
+    if (groupMode === 'post') {
+      // ── Уровень 1: строка поста ──────────────────────────────
+      const postAgg = aggregateGroup(group.rows);
+      html += `<tr class="group-header-row" onclick="toggleGroup('${gid}', event)" style="cursor:pointer;background:#e8eaf6">
+        ${hasNum ? `<td class="col-num"></td>` : ''}
+        <td style="font-weight:700;font-size:13px;padding:9px 12px;color:#3730a3">
+          <span id="toggle_${gid}" style="display:inline-block;width:14px;margin-right:6px;color:#3730a3;font-size:11px;transition:transform .2s">▶</span>
+          📍 ${esc(displayPost(group.name))}
+          <span style="font-size:11px;color:var(--text-hint);margin-left:6px;font-weight:400">${group.rows.length} оп.</span>
+        </td>
+        ${hasPost      ? `<td class="col-post"></td>` : ''}
+        ${hasWear      ? `<td class="col-wear"></td>` : ''}
+        ${hasMoralWear ? `<td class="col-wear"></td>` : ''}
+        ${hasMdf1      ? `<td class="col-wear"></td>` : ''}
+        ${hasMdf2      ? `<td class="col-wear"></td>` : ''}
+        ${hasKD  ? `<td class="col-kd">${renderKdBadge(postAgg.kd)}</td>` : ''}
+        ${hasSub ? `<td class="col-sub" style="font-size:11px;color:var(--text-sec)">${esc(postAgg.sub)}</td>` : ''}
+        ${aggDateCells(postAgg)}
+      </tr>`;
+
+      // Внутри поста — группируем по узлу
+      const nodeMap = new Map();
+      const nodeOrder = [];
+      group.rows.forEach(row => {
+        const g = row.group || '—';
+        if (!nodeMap.has(g)) { nodeMap.set(g, { num: row.num||'', name: g, rows:[] }); nodeOrder.push(g); }
+        nodeMap.get(g).rows.push(row);
+      });
+
+      nodeOrder.forEach(nodeName => {
+        const nodeGroup = nodeMap.get(nodeName);
+        const nodeGid = `g_${rowIdx++}`;
+        const nodeAgg = aggregateGroup(nodeGroup.rows);
+
+        // Если все строки flat (нет группы) — показываем без заголовка узла
+        const allFlat = nodeGroup.rows.every(r => r.flat);
+        if (allFlat || nodeName === '—') {
+          nodeGroup.rows.forEach(row => {
+            html += `<tr class="op-row op-child" data-group="${gid}" style="display:none">
+              ${hasNum ? `<td class="col-num"></td>` : ''}
+              <td class="col-op" style="padding-left:28px;color:var(--text-sec)">${esc(row.label||'')}</td>
+              ${hasPost      ? `<td class="col-post"></td>` : ''}
+              ${hasWear      ? `<td class="col-wear">${renderWearBadge(row.wear||'',false)}</td>` : ''}
+              ${hasMoralWear ? `<td class="col-wear">${renderWearBadge(row.moralWear||'',true)}</td>` : ''}
+              ${hasMdf1      ? `<td class="col-wear">${renderMdfBadge(row.mdf1||'')}</td>` : ''}
+              ${hasMdf2      ? `<td class="col-wear">${renderMdfBadge(row.mdf2||'')}</td>` : ''}
+              ${hasKD  ? `<td class="col-kd">${renderKdBadge(row.kd||'')}</td>` : ''}
+              ${hasSub ? `<td class="col-sub">${renderSubBadge(row.sub||'')}</td>` : ''}
+              ${opDateCells(row)}
+            </tr>`;
+          });
+          return;
+        }
+
+        // ── Уровень 2: строка узла (дочерняя поста) ────────────
+        html += `<tr class="group-header-row" data-group="${gid}" data-level="node" onclick="toggleGroup('${nodeGid}', event)" style="display:none;cursor:pointer">
+          ${hasNum ? `<td class="col-num"></td>` : ''}
+          <td style="font-weight:500;font-size:12.5px;padding:8px 12px 8px 28px">
+            <span id="toggle_${nodeGid}" style="display:inline-block;width:14px;margin-right:6px;color:var(--text-hint);font-size:11px;transition:transform .2s">▶</span>
+            ${esc(nodeName)}
+            <span style="font-size:11px;color:var(--text-hint);margin-left:6px">${nodeGroup.rows.length} оп.</span>
+          </td>
+          ${hasPost      ? `<td class="col-post"></td>` : ''}
+          ${hasWear      ? `<td class="col-wear"></td>` : ''}
+          ${hasMoralWear ? `<td class="col-wear"></td>` : ''}
+          ${hasMdf1      ? `<td class="col-wear"></td>` : ''}
+          ${hasMdf2      ? `<td class="col-wear"></td>` : ''}
+          ${hasKD  ? `<td class="col-kd">${renderKdBadge(nodeAgg.kd)}</td>` : ''}
+          ${hasSub ? `<td class="col-sub" style="font-size:11px;color:var(--text-sec)">${esc(nodeAgg.sub)}</td>` : ''}
+          ${aggDateCells(nodeAgg)}
+        </tr>`;
+
+        // ── Уровень 3: операции ─────────────────────────────────
+        nodeGroup.rows.forEach(row => {
+          html += `<tr class="op-row op-child" data-group="${nodeGid}" data-level="op" style="display:none">
+            ${hasNum ? `<td class="col-num"></td>` : ''}
+            <td class="col-op" style="padding-left:44px;color:var(--text-sec)">${esc(row.label||'')}</td>
+            ${hasPost      ? `<td class="col-post"></td>` : ''}
+            ${hasWear      ? `<td class="col-wear">${renderWearBadge(row.wear||'',false)}</td>` : ''}
+            ${hasMoralWear ? `<td class="col-wear">${renderWearBadge(row.moralWear||'',true)}</td>` : ''}
+            ${hasMdf1      ? `<td class="col-wear">${renderMdfBadge(row.mdf1||'')}</td>` : ''}
+            ${hasMdf2      ? `<td class="col-wear">${renderMdfBadge(row.mdf2||'')}</td>` : ''}
+            ${hasKD  ? `<td class="col-kd">${renderKdBadge(row.kd||'')}</td>` : ''}
+            ${hasSub ? `<td class="col-sub">${renderSubBadge(row.sub||'')}</td>` : ''}
+            ${opDateCells(row)}
+          </tr>`;
+        });
+      });
+
+    } else if (group.flat) {
+      // ── Flat строка — без группировки, на верхнем уровне ────
+      const row = group.rows[0];
+      html += `<tr class="op-row">
+        ${hasNum ? `<td class="col-num" style="color:var(--text-hint)">${esc(row.num||'')}</td>` : ''}
+        <td class="col-op" style="color:var(--text)">${esc(row.label||'')}</td>
+        ${hasPost ? `<td class="col-post"><span class="badge-post">${esc(row.post||'')}</span></td>` : ''}
+        ${hasWear      ? `<td class="col-wear">${renderWearBadge(row.wear||'',false)}</td>` : ''}
+        ${hasMoralWear ? `<td class="col-wear">${renderWearBadge(row.moralWear||'',true)}</td>` : ''}
+        ${hasMdf1      ? `<td class="col-wear">${renderMdfBadge(row.mdf1||'')}</td>` : ''}
+        ${hasMdf2      ? `<td class="col-wear">${renderMdfBadge(row.mdf2||'')}</td>` : ''}
+        ${hasKD  ? `<td class="col-kd">${renderKdBadge(row.kd||'')}</td>` : ''}
+        ${hasSub ? `<td class="col-sub">${renderSubBadge(row.sub||'')}</td>` : ''}
+        ${opDateCells(row)}
+      </tr>`;
+
+    } else {
+      // ── Режим "по узлам" — как раньше ───────────────────────
+      const agg = aggregateGroup(group.rows);
+      html += `<tr class="group-header-row" onclick="toggleGroup('${gid}', event)" style="cursor:pointer">
+        ${hasNum ? `<td class="col-num"></td>` : ''}
+        <td style="font-weight:500;font-size:13px;padding:9px 12px">
+          <span id="toggle_${gid}" style="display:inline-block;width:14px;margin-right:6px;color:var(--text-hint);font-size:11px;transition:transform .2s">▶</span>
+          ${esc(displayPost(group.name))}
+          <span style="font-size:11px;color:var(--text-hint);margin-left:6px">${group.rows.length} оп.</span>
+        </td>
+        ${hasPost ? `<td class="col-post"></td>` : ''}
+        ${hasWear      ? `<td class="col-wear"></td>` : ''}
+        ${hasMoralWear ? `<td class="col-wear"></td>` : ''}
+        ${hasMdf1      ? `<td class="col-wear"></td>` : ''}
+        ${hasMdf2      ? `<td class="col-wear"></td>` : ''}
+        ${hasKD  ? `<td class="col-kd">${renderKdBadge(agg.kd)}</td>` : ''}
+        ${hasSub ? `<td class="col-sub" style="font-size:11px;color:var(--text-sec)">${esc(agg.sub)}</td>` : ''}
+        ${aggDateCells(agg)}
+      </tr>`;
+
+      group.rows.forEach(row => {
+        html += `<tr class="op-row op-child" data-group="${gid}" style="display:none">
+          ${hasNum ? `<td class="col-num"></td>` : ''}
+          <td class="col-op" style="padding-left:32px;color:var(--text-sec)">${esc(row.label||'')}</td>
+          ${hasPost ? `<td class="col-post"><span class="badge-post">${esc(row.post||'')}</span></td>` : ''}
+          ${hasWear      ? `<td class="col-wear">${renderWearBadge(row.wear||'',false)}</td>` : ''}
+          ${hasMoralWear ? `<td class="col-wear">${renderWearBadge(row.moralWear||'',true)}</td>` : ''}
+          ${hasMdf1      ? `<td class="col-wear">${renderMdfBadge(row.mdf1||'')}</td>` : ''}
+          ${hasMdf2      ? `<td class="col-wear">${renderMdfBadge(row.mdf2||'')}</td>` : ''}
+          ${hasKD  ? `<td class="col-kd">${renderKdBadge(row.kd||'')}</td>` : ''}
+          ${hasSub ? `<td class="col-sub">${renderSubBadge(row.sub||'')}</td>` : ''}
+          ${opDateCells(row)}
+        </tr>`;
+      });
+    }
+  });
+
+  html += `</tbody></table></div></div>`;
+  return html;
+}
+
+let _toggleLock = {};
+function toggleGroup(gid, ev) {
+  // Гасим всплытие чтобы клик не обработался дважды (span внутри строки)
+  if (ev) { ev.stopPropagation(); }
+
+  const toggle = document.getElementById(`toggle_${gid}`);
+  // Состояние читаем из РЕАЛЬНОГО DOM — видна ли первая дочерняя строка
+  const childRows = document.querySelectorAll(`tr[data-group="${gid}"]`);
+  if (!childRows.length) return;
+  const isOpen = childRows[0].style.display !== 'none';
+
+  if (isOpen) {
+    // Закрываем рекурсивно
+    const visited = new Set();
+    function closeGroup(g) {
+      if (visited.has(g)) return;
+      visited.add(g);
+      document.querySelectorAll(`tr[data-group="${g}"]`).forEach(r => {
+        r.style.display = 'none';
+        const childToggle = r.querySelector('[id^="toggle_"]');
+        if (childToggle) {
+          const childGid = childToggle.id.replace('toggle_', '');
+          childToggle.style.transform = '';
+          closeGroup(childGid);
+        }
+      });
+    }
+    closeGroup(gid);
+    if (toggle) toggle.style.transform = '';
+  } else {
+    // Открываем — показываем прямых детей
+    childRows.forEach(r => { r.style.display = ''; });
+    if (toggle) toggle.style.transform = 'rotate(90deg)';
+  }
+}
+
+function renderDateBadge(v) {
+  if (!v) return `<span class="badge-empty"></span>`;
+  if (v === '+') return `<span class="badge-fact">✓</span>`;
+  if (v.match(/нет в комплект/i)) return `<span class="badge-nc">не вкл.</span>`;
+  if (v.match(/^\d{1,2}[.\/\-]\d|май|июн|июл|авг|сен|окт|ноя|дек|янв|фев|мар|апр/i)) return `<span class="badge-plan">${v}</span>`;
+  return `<span class="badge-fact">${v}</span>`;
+}
+function renderPlanBadge(v) {
+  if (!v) return `<span class="badge-empty"></span>`;
+  if (v.match(/нет в комплект/i)) return `<span class="badge-nc">не вкл.</span>`;
+  return `<span class="badge-plan">${v}</span>`;
+}
+function renderFactBadge(v, planV) {
+  if (!v) return planV
+    ? `<span style="display:inline-block;width:14px;height:2px;background:#d1d5db;border-radius:2px;vertical-align:middle"></span>`
+    : `<span class="badge-empty"></span>`;
+  if (v === '+') return `<span class="badge-fact">✓</span>`;
+  return `<span class="badge-fact">${v}</span>`;
+}
+function renderKdBadge(v) {
+  if (!v) return `<span class="badge-empty"></span>`;
+  if (v === '+') return `<span class="badge-kd">✓</span>`;
+  if (v.match(/нет в комплект/i)) return `<span class="badge-nc">не вкл.</span>`;
+  if (v.match(/май|июн|июл|авг|сен|окт|ноя|дек|янв|фев|мар|апр|\d{1,2}[./]/i)) return `<span class="badge-plan">${v}</span>`;
+  return `<span style="font-size:11px;color:var(--text-sec)">${v}</span>`;
+}
+function renderSubBadge(v) {
+  if (!v) return '';
+  return `<span class="badge-sub">${v}</span>`;
+}
+function renderWearBadge(v, moral) {
+  if (!v) return `<span class="badge-empty"></span>`;
+  return `<span class="badge-wear${moral?' moral':''}" title="${esc(v)}">${esc(v)}</span>`;
+}
+function renderMdfBadge(v) {
+  if (!v) return `<span class="badge-empty"></span>`;
+  return `<span class="badge-mdf" title="${esc(v)}">${esc(v)}</span>`;
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Подмена названий постов только для отображения. В Sheets — как есть.
+function displayPost(s) {
+  if (!s) return s;
+  const map = {
+    'Пост кузовной сборки': 'Для поста кузовной сборки',
+  };
+  return map[String(s).trim()] || s;
+}
+
+// ─────────────────────────────────────────────────────────────
+// INLINE-РЕДАКТИРОВАНИЕ ФАКТА В DETAIL-ТАБЛИЦАХ
+// Двойной клик по ячейке факта → input → сохранение через GAS
+// ─────────────────────────────────────────────────────────────
+
+let inlineEditActive = false;
+const lastUndo = { snapshot: null }; // для кнопки "Отменить" в toast
+
+function startPlanEdit(td) { startDateEdit(td, 'plan'); }
+function startFactEdit(td) { startDateEdit(td, 'fact'); }
+
+function startDateEdit(td, mode) {
+  if (inlineEditActive) return;
+  if (!td.dataset.row) {
+    showToast('Эту ячейку нельзя редактировать (нет привязки к строке)', 'error');
+    return;
+  }
+  inlineEditActive = true;
+
+  const sheet   = td.dataset.sheet;
+  const rowNum  = +td.dataset.row;
+  const unit    = td.dataset.unit;
+  const field   = td.dataset.field;
+  const current = td.dataset.current || '';
+  const isPlan  = mode === 'plan';
+  const accent  = isPlan ? 'var(--blue)' : 'var(--green)';
+
+  // Запоминаем какой месяц показать первым: текущее значение или сегодня
+  const initialDate = parsePlanDate(current) || new Date();
+  let viewYear  = initialDate.getFullYear();
+  let viewMonth = initialDate.getMonth(); // 0-11
+
+  // Подсветка ячейки чтобы было видно что редактируется
+  td.style.outline = '2px solid ' + accent;
+  td.style.outlineOffset = '-2px';
+
+  // Создаём попап
+  const popup = document.createElement('div');
+  popup.id = 'date-popup';
+  popup.className = 'date-popup';
+
+  // Закрытие
+  const close = () => {
+    inlineEditActive = false;
+    td.style.outline = '';
+    td.style.outlineOffset = '';
+    popup.remove();
+    document.removeEventListener('mousedown', onOutsideClick, true);
+    document.removeEventListener('keydown', onEsc);
+  };
+
+  const onOutsideClick = (e) => {
+    if (!popup.contains(e.target) && e.target !== td && !td.contains(e.target)) close();
+  };
+  const onEsc = (e) => { if (e.key === 'Escape') close(); };
+
+  // Сохранение значения и закрытие попапа
+  const pickDate = async (rusDate) => {
+    if (rusDate === current) { close(); return; }
+    td.innerHTML = `<span style="font-size:10px;color:var(--text-hint)">сохраняю...</span>`;
+    close();
+    const ok = isPlan
+      ? await savePlanValue(sheet, rowNum, unit, field, rusDate)
+      : await saveFactValue(sheet, rowNum, unit, field, rusDate);
+    if (ok) {
+      lastUndo.snapshot = { sheet, rowNum, unit, field, oldRus: current, newRus: rusDate, isPlan };
+      td.dataset.current = rusDate;
+      td.innerHTML = isPlan ? renderPlanBadge(rusDate) : renderFactBadge(rusDate, '');
+      markStale();
+      showToast(`✓ ${isPlan?'План':'Факт'} сохранён: ${rusDate || '(пусто)'}`, 'ok', () => undoLastSave(td));
+    } else {
+      td.dataset.current = current;
+      td.innerHTML = isPlan ? renderPlanBadge(current) : renderFactBadge(current, '');
+    }
+  };
+
+  // Рендер месяца
+  const renderMonth = () => {
+    const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    const dayNames = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+    // Какой день недели первого числа (0=Sun, делаем 0=Mon)
+    const first = new Date(viewYear, viewMonth, 1);
+    let firstDow = first.getDay() - 1;
+    if (firstDow < 0) firstDow = 6;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysPrev    = new Date(viewYear, viewMonth, 0).getDate();
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const cur   = parsePlanDate(current);
+
+    let cells = '';
+    let dayIdx = 0;
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 7; col++) {
+        let d, m, y, dim = false;
+        if (dayIdx < firstDow) {
+          d = daysPrev - firstDow + dayIdx + 1; m = viewMonth - 1; y = viewYear; dim = true;
+        } else if (dayIdx - firstDow >= daysInMonth) {
+          d = dayIdx - firstDow - daysInMonth + 1; m = viewMonth + 1; y = viewYear; dim = true;
+        } else {
+          d = dayIdx - firstDow + 1; m = viewMonth; y = viewYear;
+        }
+        // Нормализация
+        const cellDate = new Date(y, m, d);
+        const isToday   = cellDate.getTime() === today.getTime();
+        const isCurrent = cur && cellDate.getTime() === cur.setHours(0,0,0,0);
+        const isWeekend = col >= 5;
+        let cls = 'dp-cell';
+        if (dim)       cls += ' dim';
+        if (isToday)   cls += ' today';
+        if (isCurrent) cls += ' current';
+        if (isWeekend && !dim) cls += ' weekend';
+        const rusStr = fmtPlanDate(cellDate);
+        cells += `<button class="${cls}" data-rus="${rusStr}">${d}</button>`;
+        dayIdx++;
+      }
+    }
+
+    popup.innerHTML = `
+      <div class="dp-header">
+        <button class="dp-nav" data-step="-12" title="−1 год">«</button>
+        <button class="dp-nav" data-step="-1" title="−1 месяц">‹</button>
+        <div class="dp-title">${monthNames[viewMonth]} ${viewYear}</div>
+        <button class="dp-nav" data-step="1" title="+1 месяц">›</button>
+        <button class="dp-nav" data-step="12" title="+1 год">»</button>
+      </div>
+      <div class="dp-dows">${dayNames.map(n=>`<div class="dp-dow">${n}</div>`).join('')}</div>
+      <div class="dp-grid">${cells}</div>
+      <div class="dp-footer">
+        <button class="dp-action dp-today">Сегодня</button>
+        ${current ? `<button class="dp-action dp-clear">Очистить</button>` : ''}
+        <button class="dp-action dp-cancel">Отмена</button>
+      </div>
+    `;
+
+    // Навешиваем хэндлеры
+    popup.querySelectorAll('.dp-nav').forEach(b => b.onclick = () => {
+      const step = +b.dataset.step;
+      viewMonth += step;
+      while (viewMonth < 0)  { viewMonth += 12; viewYear--; }
+      while (viewMonth > 11) { viewMonth -= 12; viewYear++; }
+      renderMonth();
+    });
+    popup.querySelectorAll('.dp-cell').forEach(b => b.onclick = () => pickDate(b.dataset.rus));
+    popup.querySelector('.dp-today').onclick = () => pickDate(fmtPlanDate(new Date()));
+    const clearBtn = popup.querySelector('.dp-clear');
+    if (clearBtn) clearBtn.onclick = () => pickDate('');
+    popup.querySelector('.dp-cancel').onclick = close;
+  };
+
+  document.body.appendChild(popup);
+  renderMonth();
+
+  // Позиционирование под ячейкой (или над, если внизу не хватает места)
+  const rect = td.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+  let top  = rect.bottom + 4;
+  let left = rect.left + rect.width / 2 - popupRect.width / 2;
+  if (top + popupRect.height > window.innerHeight - 8) {
+    top = rect.top - popupRect.height - 4;
+  }
+  if (left < 8) left = 8;
+  if (left + popupRect.width > window.innerWidth - 8) left = window.innerWidth - popupRect.width - 8;
+  popup.style.top  = top + 'px';
+  popup.style.left = left + 'px';
+
+  // Закрытие по клику вне и Esc
+  setTimeout(() => {
+    document.addEventListener('mousedown', onOutsideClick, true);
+    document.addEventListener('keydown', onEsc);
+  }, 50);
+}
+
+// Отдельный хелпер для сохранения факта (используется в startInlineEdit и undoLastSave)
+async function saveFactValue(sheet, rowNum, unit, field, rusValue) {
+  const payload = { action:'saveFact', sheet, unit, updates:[{ row: rowNum }] };
+  if (field === 'startFact') payload.updates[0].startFact = rusValue;
+  else if (field === 'endFact') payload.updates[0].endFact = rusValue;
+  else if (field === 'fact')   { payload.updates[0].startFact = rusValue; payload.updates[0].endFact = rusValue; }
+  try {
+    const r = await fetch(GAS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    const result = await r.json();
+    if (result.error) {
+      showToast('Ошибка: ' + result.error, 'error');
+      return false;
+    }
+    // НЕ сбрасываем кэш — только помечаем что сводка/гант устарели.
+    // Пользователь обновит вручную кнопкой «Обновить».
+    markStale();
+    return true;
+  } catch(e) {
+    showToast('Сетевая ошибка: ' + e.message, 'error');
+    return false;
+  }
+}
+
+// Сохранение плана inline (без PIN)
+async function savePlanValue(sheet, rowNum, unit, field, rusValue) {
+  const payload = { action:'savePlan', sheet, unit, updates:[{ row: rowNum }] };
+  if (field === 'startPlan') payload.updates[0].startPlan = rusValue;
+  else if (field === 'endPlan') payload.updates[0].endPlan = rusValue;
+  else if (field === 'plan')   { payload.updates[0].startPlan = rusValue; payload.updates[0].endPlan = rusValue; }
+  try {
+    const r = await fetch(GAS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    const result = await r.json();
+    if (result.error) {
+      showToast('Ошибка: ' + result.error, 'error');
+      return false;
+    }
+    markStale();
+    return true;
+  } catch(e) {
+    showToast('Сетевая ошибка: ' + e.message, 'error');
+    return false;
+  }
+}
+
+async function undoLastSave(td) {
+  if (!lastUndo.snapshot) return;
+  const s = lastUndo.snapshot;
+  const ok = s.isPlan
+    ? await savePlanValue(s.sheet, s.rowNum, s.unit, s.field, s.oldRus)
+    : await saveFactValue(s.sheet, s.rowNum, s.unit, s.field, s.oldRus);
+  if (!ok) return;
+  if (td) {
+    td.dataset.current = s.oldRus;
+    td.innerHTML = s.isPlan ? renderPlanBadge(s.oldRus) : renderFactBadge(s.oldRus, '');
+  }
+  showToast('↩ Отменено', 'ok');
+  lastUndo.snapshot = null;
+}
+
+// Toast снизу справа. type: 'ok' | 'error'. onUndo — опциональный callback на «Отменить»
+let toastTimer = null;
+function showToast(message, type='ok', onUndo=null) {
+  let toast = document.getElementById('inline-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'inline-toast';
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:10000;display:flex;align-items:center;gap:14px;max-width:400px;transition:transform .2s,opacity .2s;transform:translateY(20px);opacity:0';
+    document.body.appendChild(toast);
+  }
+  const bg = type === 'error' ? '#991b1b' : '#1a1a1a';
+  toast.style.background = bg;
+  toast.innerHTML = `<span>${esc(message)}</span>`;
+  if (onUndo) {
+    const btn = document.createElement('button');
+    btn.textContent = 'Отменить';
+    btn.style.cssText = 'background:transparent;color:#93c5fd;border:none;cursor:pointer;font-size:12px;font-weight:500;text-decoration:underline;padding:0';
+    btn.onclick = () => { hideToast(); onUndo(); };
+    toast.appendChild(btn);
+  }
+  requestAnimationFrame(() => {
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
+  });
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, onUndo ? 5000 : 2500);
+}
+function hideToast() {
+  const toast = document.getElementById('inline-toast');
+  if (!toast) return;
+  toast.style.transform = 'translateY(20px)';
+  toast.style.opacity = '0';
+}
+function switchGroup(tab, mode) {
+  currentGroupMode[tab] = mode;
+  renderTab();
+}
+function goToTab(tab, proj) {
+  currentProj[tab] = proj;
+  document.querySelectorAll('.subtab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  currentTab = tab; renderTab();
+}
+function switchProj(tab, proj) {
+  currentProj[tab] = proj;
+  const sheets = TAB_SHEETS[tab];
+  const sheet  = sheets && sheets[proj];
+  if (sheet && !detailCache[sheet]) loadDetail(tab);
+  else renderTab();
+}
+function animateBars() {
+  requestAnimationFrame(() => { document.querySelectorAll('[data-w]').forEach(b => { b.style.width = b.dataset.w; }); });
+}
+function setMeta(state, updated) {
+  const el = document.getElementById('meta-status');
+  if (state === 'ok') {
+    const t = updated ? new Date(updated).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}) : '';
+    el.innerHTML = `<span class="meta-dot"></span>данные из GAS · обновлено ${t}`;
+  } else if (state === 'loading') {
+    el.innerHTML = `<span class="loader"></span>загрузка...`;
+  } else {
+    el.innerHTML = `<span class="meta-dot" style="background:#ef4444"></span>ошибка · демо`;
+  }
+}
+function fillCls(p) { return p>=70?'fill-green':p>=40?'fill-amber':p>0?'fill-red':'fill-gray'; }
+function badgeCls(p) { return p>=70?'green':p>=40?'amber':p>0?'red':'blue'; }
+function statusLabel(p) { return p>=70?'В норме':p>=40?'Отставание':p>0?'Начало':'Не начато'; }
+function statusBadge(pct, noData) {
+  if (noData) return `<span class="area-status status-go" style="font-size:10.5px">→ открыть</span>`;
+  if (pct>=90) return `<span class="area-status status-ok">Завершено</span>`;
+  if (pct>=60) return `<span class="area-status status-ok">В норме</span>`;
+  if (pct>=30) return `<span class="area-status status-warn">Отставание</span>`;
+  if (pct>0)   return `<span class="area-status status-stop">Начато</span>`;
+  return `<span class="area-status status-go">→ открыть</span>`;
+}
+function getDemoData() {
+  return { updated:new Date().toISOString(),
+    kpi:{t8_units:3,s2_units:5,total_units:8,t8_areas:5,s2_areas:3,t8_avg_pct:1,s2_avg_pct:1,total_avg_pct:1},
+    t8:{units:UNITS_T8,areas:{
+      'формовка Т8':{progress:{'Т8-5':{pct:12},'Т8-6':{pct:8},'Т8-7':{pct:5}}},
+      'сварка T8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
+      'сборка Т8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
+      'Полиуретан Т8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
+      'кузовная Т8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
+    }},
+    s2:{units:UNITS_S2,areas:{
+      'формовка S2':{progress:{'S2-5':{pct:2},'S2-1':{pct:2},'S2-2':{pct:2},'S2-3':{pct:2},'S2-4':{pct:2}}},
+      'сварка S2':{progress:{'S2-5':{pct:0},'S2-1':{pct:0},'S2-2':{pct:0},'S2-3':{pct:0},'S2-4':{pct:0}}},
+      'сборка S2':{progress:{'S2-5':{pct:0},'S2-1':{pct:0},'S2-2':{pct:0},'S2-3':{pct:0},'S2-4':{pct:0}}},
+    }}
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// СТРАНИЦА «ПЛАН» — ввод плановых дат для одной машины
+// ─────────────────────────────────────────────────────────────
+const PLAN_AREAS = {
+  formovka:   { t8: 'формовка Т8', s2: 'формовка S2' },
+  svarka:     { t8: 'сварка T8',   s2: 'сварка S2'   },
+  sborka:     { t8: 'сборка Т8',   s2: 'сборка S2'   },
+  poliuretan: { t8: 'Полиуретан Т8', s2: null         },
+  kuzov:      { t8: 'кузовная Т8',  s2: 'кузовная S2' },
+};
+
+let planState = {
+  area:  'formovka',
+  proj:  't8',
+  unit:  'Т8-5',
+  rows:  [],         // [{ rowNum, label, group, startPlan, endPlan, duration, dirty }]
+  loading: false,
+};
+
+function renderPlanPage() {
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:18px;font-weight:600">✎ Ввод плана</div>
+      <div id="plan-current-sheet" style="font-size:12px;color:var(--blue);background:var(--blue-bg);padding:3px 10px;border-radius:4px;font-weight:500"></div>
+      <div style="color:var(--text-hint);font-size:12.5px">Введи даты старта и конца плана для каждой операции. Длительность считается автоматически.</div>
+    </div>
+
+    <div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;text-transform:uppercase">Участок</div>
+        <select id="plan-area" style="padding:6px 10px;border:0.5px solid var(--border-med);border-radius:6px;font-size:13px;background:#fff">
+          <option value="formovka">Формовка</option>
+          <option value="svarka">Сварка</option>
+          <option value="sborka">Сборка</option>
+          <option value="poliuretan">Полиуретан</option>
+          <option value="kuzov">Кузовная</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;text-transform:uppercase">Проект</div>
+        <select id="plan-proj" style="padding:6px 10px;border:0.5px solid var(--border-med);border-radius:6px;font-size:13px;background:#fff">
+          <option value="t8">T8</option>
+          <option value="s2">S2</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;text-transform:uppercase">Машина</div>
+        <select id="plan-unit" style="padding:6px 10px;border:0.5px solid var(--border-med);border-radius:6px;font-size:13px;background:#fff"></select>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <span id="plan-dirty-info" style="font-size:11.5px;color:var(--text-hint)"></span>
+        <button id="plan-save" onclick="savePlan()" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer">Сохранить план</button>
+      </div>
+    </div>
+
+    <div id="plan-table-wrap"></div>
+  `;
+
+  // Восстановим состояние селектов
+  document.getElementById('plan-area').value = planState.area;
+  document.getElementById('plan-proj').value = planState.proj;
+  refreshPlanUnits();
+
+  // События селектов
+  document.getElementById('plan-area').onchange = (e) => {
+    planState.area = e.target.value;
+    refreshPlanUnits();
+    loadPlanRows();
+  };
+  document.getElementById('plan-proj').onchange = (e) => {
+    planState.proj = e.target.value;
+    refreshPlanUnits();
+    loadPlanRows();
+  };
+  document.getElementById('plan-unit').onchange = (e) => {
+    planState.unit = e.target.value;
+    loadPlanRows();
+  };
+
+  loadPlanRows();
+}
+
+function refreshPlanUnits() {
+  const units = planState.proj === 't8' ? UNITS_T8 : UNITS_S2;
+  const sel = document.getElementById('plan-unit');
+  sel.innerHTML = units.map(u => `<option value="${u}">${u}</option>`).join('');
+  if (!units.includes(planState.unit)) planState.unit = units[0];
+  sel.value = planState.unit;
+}
+
+async function loadPlanRows() {
+  const sheets = PLAN_AREAS[planState.area];
+  const sheet  = sheets && sheets[planState.proj];
+  const wrap   = document.getElementById('plan-table-wrap');
+
+  if (!sheet) {
+    wrap.innerHTML = `<div class="state-msg">Для ${planState.proj.toUpperCase()} нет листа на участке "${planState.area}"</div>`;
+    planState.rows = [];
+    updatePlanDirtyInfo();
+    return;
+  }
+
+  // Всегда грузим свежие данные — игнорируем кэш
+  wrap.innerHTML = `<div class="big-loading"><span class="loader"></span><div class="big-loading-text">Загружаем ${sheet}</div></div>`;
+  let detail;
+  try {
+    const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(sheet) + '&_=' + Date.now());
+    detail = await r.json();
+    detailCache[sheet] = detail;
+  } catch(e) {
+    wrap.innerHTML = `<div class="state-msg">Ошибка загрузки: ${e.message}</div>`;
+    return;
+  }
+
+  if (!detail.hasStartEnd) {
+    wrap.innerHTML = `<div class="state-msg">Лист "${sheet}" не поддерживает план-старт/план-конец</div>`;
+    planState.rows = [];
+    updatePlanDirtyInfo();
+    return;
+  }
+
+  const indicator = document.getElementById('plan-current-sheet');
+  if (indicator) indicator.textContent = `📋 ${sheet} · ${detail.rows.length} оп.`;
+
+  // Собираем строки для редактирования. Нужны row index из листа — но в detail у нас этого нет!
+  // Соберём по порядку: первая операция = первая строка после dataStartRow, и т.д.
+  // НО: detail.rows может содержать пропуски (пустые строки скипаются в buildDetail).
+  // Поэтому нам нужно либо переделать buildDetail чтобы возвращал rowNum, либо собирать здесь.
+  // ВРЕМЕННО: используем порядковый индекс — это сработает только если в листе нет пропусков.
+  // Правильное решение — добавить rowNum в buildDetail (см. TODO ниже).
+
+  // Получим конфиг с бэка — у нас он не приходит, поэтому используем хардкод dataStartRow
+  // Лучше попросить бэк отдавать sourceRow в каждой строке.
+  planState.rows = detail.rows.map((r, idx) => {
+    const d = (r.dates && r.dates[planState.unit]) || {};
+    return {
+      idx,
+      rowNum: r.sourceRow || null,  // нужен бэкенд-патч; пока попробуем sourceRow
+      label: r.label || '',
+      group: r.group || '',
+      post:  r.post  || '',
+      flat:  r.flat,
+      startPlan: d.startPlan || '',
+      endPlan:   d.endPlan   || '',
+      duration:  calcDuration(d.startPlan, d.endPlan),
+      origStart: d.startPlan || '',
+      origEnd:   d.endPlan   || '',
+      dirty: false,
+    };
+  });
+
+  renderPlanTable();
+  updatePlanDirtyInfo();
+}
+
+function calcDuration(start, end) {
+  if (!start || !end) return null;
+  const ds = parsePlanDate(start), de = parsePlanDate(end);
+  if (!ds || !de) return null;
+  return Math.round((de - ds) / 86400000);
+}
+
+function parsePlanDate(s) {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!m) return null;
+  return new Date(+m[3], +m[2]-1, +m[1]);
+}
+
+function rusToIso(s) {
+  const m = String(s||'').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!m) return '';
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+
+function isoToRus(s) {
+  const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  return `${m[3]}.${m[2]}.${m[1]}`;
+}
+
+function fmtPlanDate(d) {
+  if (!d) return '';
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${dd}.${mm}.${d.getFullYear()}`;
+}
+
+function renderPlanTable() {
+  const rows = planState.rows;
+  const wrap = document.getElementById('plan-table-wrap');
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="state-msg">Нет операций</div>`;
+    return;
+  }
+
+  // Группировка только по постам (узлы игнорируем — слишком детальная разбивка)
+  const groupKey = r => r.post || r.group || '';
+
+  // Соберём список уникальных групп с их строками (по уникальному имени, не по соседству)
+  const groupMap = new Map();
+  rows.forEach((r, i) => {
+    const g = groupKey(r);
+    if (!groupMap.has(g)) groupMap.set(g, { name: g, rows: [] });
+    groupMap.get(g).rows.push({ ...r, _idx: i });
+  });
+  const groups = Array.from(groupMap.values());
+
+  let html = `<div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);overflow:auto;max-height:calc(100vh - 220px)">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead style="background:var(--surface2);position:sticky;top:0;z-index:2">
+        <tr>
+          <th style="padding:8px 12px;text-align:left;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--text-hint);font-weight:500">Операция</th>
+          <th style="padding:8px 12px;width:130px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--text-hint);font-weight:500">Старт План</th>
+          <th style="padding:8px 12px;width:80px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--text-hint);font-weight:500">Дней</th>
+          <th style="padding:8px 12px;width:130px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--text-hint);font-weight:500">Конец План</th>
+          <th style="padding:8px 12px;width:50px;border-bottom:0.5px solid var(--border-med)"></th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  groups.forEach((group, gi) => {
+    const gid = `plan_g_${gi}`;
+    const dirtyInGroup = group.rows.filter(r => r.dirty).length;
+    const groupLabel = group.name || '(без группы)';
+    const isCollapsed = planState.collapsed && planState.collapsed[groupLabel];
+    const chevron = isCollapsed ? '▶' : '▼';
+
+    // Заголовок группы — клик сворачивает/разворачивает
+    html += `<tr class="plan-group-header" data-group-name="${esc(groupLabel)}" onclick="togglePlanGroup('${esc(groupLabel).replace(/'/g,"\\'")}')" style="cursor:pointer">
+      <td colspan="5" style="background:#f0f0ef;padding:9px 12px;font-weight:600;font-size:12.5px;color:var(--text);border-top:1px solid var(--border-med);border-bottom:0.5px solid var(--border-med);user-select:none">
+        <span style="display:inline-block;width:14px;color:var(--text-hint);font-size:10px;margin-right:4px">${chevron}</span>${esc(displayPost(groupLabel))}
+        <span style="font-size:11px;color:var(--text-hint);margin-left:8px;font-weight:400">${group.rows.length} оп.</span>
+        ${dirtyInGroup ? `<span style="font-size:11px;color:#f59e0b;margin-left:8px;font-weight:500">● ${dirtyInGroup} изм.</span>` : ''}
+      </td>
+    </tr>`;
+
+    if (isCollapsed) return;
+
+    group.rows.forEach(r => {
+      const i = r._idx;
+      const dirtyMark = r.dirty ? '<span style="color:#f59e0b;margin-right:4px">●</span>' : '';
+      const isoStart = rusToIso(r.startPlan);
+      const isoEnd   = rusToIso(r.endPlan);
+
+      html += `<tr data-plan-row="${i}" style="border-bottom:0.5px solid var(--border)">
+        <td style="padding:7px 12px;padding-left:32px">${dirtyMark}${esc(r.label)}</td>
+        <td style="padding:5px 8px;text-align:center">
+          <input type="date" data-fld="start" value="${isoStart}" onchange="onPlanChange(${i},'start',isoToRus(this.value))"
+                 style="width:100%;padding:5px 8px;border:0.5px solid var(--border-med);border-radius:4px;font-size:12px;text-align:center;font-family:inherit">
+        </td>
+        <td style="padding:5px 8px;text-align:center">
+          <input type="number" data-fld="duration" min="0" value="${r.duration ?? ''}" onchange="onPlanChange(${i},'duration',this.value)"
+                 style="width:100%;padding:5px 8px;border:0.5px solid var(--border-med);border-radius:4px;font-size:12px;text-align:center;font-family:inherit">
+        </td>
+        <td style="padding:5px 8px;text-align:center">
+          <input type="date" data-fld="end" value="${isoEnd}" onchange="onPlanChange(${i},'end',isoToRus(this.value))"
+                 style="width:100%;padding:5px 8px;border:0.5px solid var(--border-med);border-radius:4px;font-size:12px;text-align:center;font-family:inherit">
+        </td>
+        <td style="padding:5px 8px;text-align:center">
+          <button onclick="planFromPrev(${i})" title="Старт = конец предыдущей"
+                  style="padding:4px 6px;background:transparent;border:0.5px solid var(--border-med);border-radius:4px;cursor:pointer;font-size:11px">↩</button>
+        </td>
+      </tr>`;
+    });
+  });
+
+  html += `</tbody></table></div>`;
+  wrap.innerHTML = html;
+}
+
+function togglePlanGroup(name) {
+  if (!planState.collapsed) planState.collapsed = {};
+  planState.collapsed[name] = !planState.collapsed[name];
+  renderPlanTable();
+}
+
+function onPlanChange(idx, field, value) {
+  const r = planState.rows[idx];
+  if (!r) return;
+
+  if (field === 'start') {
+    r.startPlan = value.trim();
+    // Если задана длительность — пересчитаем конец
+    if (r.duration !== null && r.duration !== '' && parsePlanDate(r.startPlan)) {
+      const d = parsePlanDate(r.startPlan);
+      d.setDate(d.getDate() + Number(r.duration));
+      r.endPlan = fmtPlanDate(d);
+    } else {
+      r.duration = calcDuration(r.startPlan, r.endPlan);
+    }
+  } else if (field === 'end') {
+    r.endPlan = value.trim();
+    r.duration = calcDuration(r.startPlan, r.endPlan);
+  } else if (field === 'duration') {
+    r.duration = value === '' ? null : Number(value);
+    if (r.duration !== null && parsePlanDate(r.startPlan)) {
+      const d = parsePlanDate(r.startPlan);
+      d.setDate(d.getDate() + r.duration);
+      r.endPlan = fmtPlanDate(d);
+    }
+  }
+
+  r.dirty = (r.startPlan !== r.origStart || r.endPlan !== r.origEnd);
+  r.changedStart = (r.startPlan !== r.origStart);
+  r.changedEnd   = (r.endPlan   !== r.origEnd);
+
+  // Точечно обновляем только инпуты этой строки
+  updatePlanRowInputs(idx);
+  updatePlanDirtyInfo();
+}
+
+function updatePlanRowInputs(idx) {
+  const r = planState.rows[idx];
+  if (!r) return;
+  const tr = document.querySelector(`tr[data-plan-row="${idx}"]`);
+  if (!tr) return;
+
+  const startInput = tr.querySelector('input[data-fld="start"]');
+  const endInput   = tr.querySelector('input[data-fld="end"]');
+  const durInput   = tr.querySelector('input[data-fld="duration"]');
+
+  if (startInput && document.activeElement !== startInput) startInput.value = rusToIso(r.startPlan);
+  if (endInput   && document.activeElement !== endInput)   endInput.value   = rusToIso(r.endPlan);
+  if (durInput   && document.activeElement !== durInput)   durInput.value   = r.duration ?? '';
+
+  const labelCell = tr.querySelector('td:first-child');
+  if (labelCell) {
+    const has = labelCell.querySelector('.plan-dirty-dot');
+    if (r.dirty && !has) {
+      const dot = document.createElement('span');
+      dot.className = 'plan-dirty-dot';
+      dot.style.cssText = 'color:#f59e0b;margin-right:4px';
+      dot.textContent = '●';
+      labelCell.insertBefore(dot, labelCell.firstChild);
+    } else if (!r.dirty && has) {
+      has.remove();
+    }
+  }
+}
+
+function planFromPrev(idx) {
+  if (idx === 0) return;
+  const prev = planState.rows[idx - 1];
+  if (!prev.endPlan) {
+    alert('У предыдущей операции не задан конец плана');
+    return;
+  }
+  onPlanChange(idx, 'start', prev.endPlan);
+}
+
+function updatePlanDirtyInfo() {
+  const dirty = planState.rows.filter(r => r.dirty).length;
+  const el = document.getElementById('plan-dirty-info');
+  if (el) el.textContent = dirty > 0 ? `Изменено: ${dirty} оп.` : 'Изменений нет';
+  const btn = document.getElementById('plan-save');
+  if (btn) btn.disabled = dirty === 0;
+}
+
+async function savePlan() {
+  const dirty = planState.rows.filter(r => r.dirty);
+  if (!dirty.length) {
+    alert('Нет изменений');
+    return;
+  }
+
+  const sheets = PLAN_AREAS[planState.area];
+  const sheet  = sheets[planState.proj];
+
+  // Проверка — у нас должны быть rowNum
+  const missingRow = dirty.find(r => !r.rowNum);
+  if (missingRow) {
+    alert('Внимание: фронт не получил sourceRow от бэка.\nНужно обновить utils.gs (см. инструкцию).\n\nОперация без rowNum: ' + missingRow.label);
+    return;
+  }
+
+  // Проверка конфликтов
+  document.getElementById('plan-save').textContent = 'Проверка...';
+  document.getElementById('plan-save').disabled = true;
+  let conflictCheck;
+  try {
+    conflictCheck = await checkConflicts(sheet, dirty, 'plan', planState.unit);
+  } catch(e) {
+    document.getElementById('plan-save').textContent = 'Сохранить план';
+    document.getElementById('plan-save').disabled = false;
+    alert('Не удалось проверить конфликты: ' + e.message);
+    return;
+  }
+
+  if (conflictCheck.conflicts.length) {
+    const ok = confirm(
+      `⚠ В Google Sheets уже изменили ${conflictCheck.conflicts.length} из ваших ${dirty.length} операций ` +
+      `(возможно, кто-то правил в таблице):\n\n` +
+      describeConflicts(conflictCheck.conflicts) +
+      `\n\n— OK → перезаписать своими значениями\n— Отмена → отменить сохранение и обновить данные`
+    );
+    if (!ok) {
+      document.getElementById('plan-save').textContent = 'Сохранить план';
+      document.getElementById('plan-save').disabled = false;
+      delete detailCache[sheet];
+      loadPlanRows();
+      return;
+    }
+  }
+
+  const updates = dirty.map(r => ({
+    row: r.rowNum,
+    startPlan: r.startPlan || '',
+    endPlan:   r.endPlan   || '',
+  }));
+
+  document.getElementById('plan-save').textContent = 'Сохраняем...';
+
+  try {
+    const r = await fetch(GAS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'savePlan',
+        sheet,
+        unit: planState.unit,
+        updates,
+      }),
+    });
+    const result = await r.json();
+
+    if (result.error) {
+      alert('Ошибка: ' + result.error);
+    } else {
+      alert(`✓ Сохранено ${result.written} ячеек`);
+      // Обновим оригиналы и сбросим dirty
+      dirty.forEach(r => {
+        r.origStart = r.startPlan;
+        r.origEnd   = r.endPlan;
+        r.changedStart = false;
+        r.changedEnd   = false;
+        r.dirty = false;
+      });
+      // Не сбрасываем кэш сводки/ганта — помечаем устаревшим (точка на «Обновить»)
+      markStale();
+      renderPlanTable();
+      updatePlanDirtyInfo();
+    }
+  } catch(e) {
+    alert('Сетевая ошибка: ' + e.message);
+  } finally {
+    document.getElementById('plan-save').textContent = 'Сохранить план';
+    document.getElementById('plan-save').disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// СТРАНИЦА «ФАКТ» — ввод фактических дат для мастеров
+// (структура копирует «План», но пишет в startFact/endFact)
+// ═══════════════════════════════════════════════════════════════
+
+let factState = {
+  area:  'formovka',
+  proj:  't8',
+  unit:  'Т8-5',
+  rows:  [],
+};
+
+function renderFactPage() {
+  const el = document.getElementById('content');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:18px;font-weight:600">✓ Ввод факта</div>
+      <div id="fact-current-sheet" style="font-size:12px;color:var(--green);background:var(--green-bg);padding:3px 10px;border-radius:4px;font-weight:500"></div>
+      <div style="color:var(--text-hint);font-size:12.5px">Отметьте даты, когда операция фактически началась и закончилась.</div>
+    </div>
+
+    <div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;text-transform:uppercase">Участок</div>
+        <select id="fact-area" style="padding:6px 10px;border:0.5px solid var(--border-med);border-radius:6px;font-size:13px;background:#fff">
+          <option value="formovka">Формовка</option>
+          <option value="svarka">Сварка</option>
+          <option value="sborka">Сборка</option>
+          <option value="poliuretan">Полиуретан</option>
+          <option value="kuzov">Кузовная</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;text-transform:uppercase">Проект</div>
+        <select id="fact-proj" style="padding:6px 10px;border:0.5px solid var(--border-med);border-radius:6px;font-size:13px;background:#fff">
+          <option value="t8">T8</option>
+          <option value="s2">S2</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;text-transform:uppercase">Машина</div>
+        <select id="fact-unit" style="padding:6px 10px;border:0.5px solid var(--border-med);border-radius:6px;font-size:13px;background:#fff"></select>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <span id="fact-dirty-info" style="font-size:11.5px;color:var(--text-hint)"></span>
+        <button id="fact-save" onclick="saveFact()" style="padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer">Сохранить факт</button>
+      </div>
+    </div>
+
+    <div id="fact-table-wrap"></div>
+  `;
+
+  document.getElementById('fact-area').value = factState.area;
+  document.getElementById('fact-proj').value = factState.proj;
+  refreshFactUnits();
+
+  document.getElementById('fact-area').onchange = (e) => {
+    factState.area = e.target.value;
+    refreshFactUnits();
+    loadFactRows();
+  };
+  document.getElementById('fact-proj').onchange = (e) => {
+    factState.proj = e.target.value;
+    refreshFactUnits();
+    loadFactRows();
+  };
+  document.getElementById('fact-unit').onchange = (e) => {
+    factState.unit = e.target.value;
+    loadFactRows();
+  };
+
+  loadFactRows();
+}
+
+function refreshFactUnits() {
+  const units = factState.proj === 't8' ? UNITS_T8 : UNITS_S2;
+  const sel = document.getElementById('fact-unit');
+  sel.innerHTML = units.map(u => `<option value="${u}">${u}</option>`).join('');
+  if (!units.includes(factState.unit)) factState.unit = units[0];
+  sel.value = factState.unit;
+}
+
+async function loadFactRows() {
+  const sheets = PLAN_AREAS[factState.area]; // переиспользуем тот же маппинг
+  const sheet  = sheets && sheets[factState.proj];
+  const wrap   = document.getElementById('fact-table-wrap');
+
+  if (!sheet) {
+    wrap.innerHTML = `<div class="state-msg">Для ${factState.proj.toUpperCase()} нет листа на участке "${factState.area}"</div>`;
+    factState.rows = [];
+    updateFactDirtyInfo();
+    return;
+  }
+
+  wrap.innerHTML = `<div class="big-loading"><span class="loader"></span><div class="big-loading-text">Загружаем ${sheet}</div></div>`;
+  let detail;
+  try {
+    const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(sheet) + '&_=' + Date.now());
+    detail = await r.json();
+    detailCache[sheet] = detail;
+  } catch(e) {
+    wrap.innerHTML = `<div class="state-msg">Ошибка загрузки: ${e.message}</div>`;
+    return;
+  }
+
+  if (!detail.hasStartEnd) {
+    wrap.innerHTML = `<div class="state-msg">Лист "${sheet}" не поддерживает старт/конец факта</div>`;
+    factState.rows = [];
+    updateFactDirtyInfo();
+    return;
+  }
+
+  const indicator = document.getElementById('fact-current-sheet');
+  if (indicator) indicator.textContent = `📋 ${sheet} · ${detail.rows.length} оп.`;
+
+  factState.rows = detail.rows.map((r, idx) => {
+    const d = (r.dates && r.dates[factState.unit]) || {};
+    return {
+      idx,
+      rowNum: r.sourceRow || null,
+      label: r.label || '',
+      group: r.group || '',
+      post:  r.post  || '',
+      flat:  r.flat,
+      startPlan: d.startPlan || '',  // показываем как подсказку
+      endPlan:   d.endPlan   || '',
+      startFact: d.startFact || '',
+      endFact:   d.endFact   || '',
+      duration:  calcDuration(d.startFact, d.endFact),
+      origStart: d.startFact || '',
+      origEnd:   d.endFact   || '',
+      dirty: false,
+    };
+  });
+
+  renderFactTable();
+  updateFactDirtyInfo();
+}
+
+function renderFactTable() {
+  const rows = factState.rows;
+  const wrap = document.getElementById('fact-table-wrap');
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="state-msg">Нет операций</div>`;
+    return;
+  }
+
+  // Группировка только по постам (узлы игнорируем — слишком детальная разбивка)
+  const groupKey = r => r.post || r.group || '';
+
+  const groupMap = new Map();
+  rows.forEach((r, i) => {
+    const g = groupKey(r);
+    if (!groupMap.has(g)) groupMap.set(g, { name: g, rows: [] });
+    groupMap.get(g).rows.push({ ...r, _idx: i });
+  });
+  const groups = Array.from(groupMap.values());
+
+  let html = `<div style="background:var(--surface);border:0.5px solid var(--border-med);border-radius:var(--radius);overflow:auto;max-height:calc(100vh - 220px)">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead style="background:var(--surface2);position:sticky;top:0;z-index:2">
+        <tr>
+          <th style="padding:8px 12px;text-align:left;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--text-hint);font-weight:500">Операция</th>
+          <th style="padding:8px 12px;width:110px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--text-hint);font-weight:500">План (для справки)</th>
+          <th style="padding:8px 12px;width:130px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--green);font-weight:500;background:var(--green-bg)">Старт факт</th>
+          <th style="padding:8px 12px;width:80px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--green);font-weight:500;background:var(--green-bg)">Дней</th>
+          <th style="padding:8px 12px;width:130px;text-align:center;border-bottom:0.5px solid var(--border-med);font-size:10.5px;text-transform:uppercase;color:var(--green);font-weight:500;background:var(--green-bg)">Конец факт</th>
+          <th style="padding:8px 12px;width:50px;border-bottom:0.5px solid var(--border-med)"></th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  groups.forEach((group, gi) => {
+    const dirtyInGroup = group.rows.filter(r => r.dirty).length;
+    const groupLabel = group.name || '(без группы)';
+    const isCollapsed = factState.collapsed && factState.collapsed[groupLabel];
+    const chevron = isCollapsed ? '▶' : '▼';
+
+    html += `<tr class="fact-group-header" onclick="toggleFactGroup('${esc(groupLabel).replace(/'/g,"\\'")}')" style="cursor:pointer">
+      <td colspan="6" style="background:#f0f0ef;padding:9px 12px;font-weight:600;font-size:12.5px;color:var(--text);border-top:1px solid var(--border-med);border-bottom:0.5px solid var(--border-med);user-select:none">
+        <span style="display:inline-block;width:14px;color:var(--text-hint);font-size:10px;margin-right:4px">${chevron}</span>${esc(displayPost(groupLabel))}
+        <span style="font-size:11px;color:var(--text-hint);margin-left:8px;font-weight:400">${group.rows.length} оп.</span>
+        ${dirtyInGroup ? `<span style="font-size:11px;color:#f59e0b;margin-left:8px;font-weight:500">● ${dirtyInGroup} изм.</span>` : ''}
+      </td>
+    </tr>`;
+
+    if (isCollapsed) return;
+
+    group.rows.forEach(r => {
+      const i = r._idx;
+      const dirtyMark = r.dirty ? '<span style="color:#f59e0b;margin-right:4px">●</span>' : '';
+      const isoStart = rusToIso(r.startFact);
+      const isoEnd   = rusToIso(r.endFact);
+
+      let planHint = '';
+      if (r.startPlan || r.endPlan) {
+        planHint = `<span style="font-size:10.5px;color:var(--text-hint)">${r.startPlan || '—'} → ${r.endPlan || '—'}</span>`;
+      } else {
+        planHint = `<span style="font-size:10.5px;color:var(--text-hint)">—</span>`;
+      }
+
+      html += `<tr data-fact-row="${i}" style="border-bottom:0.5px solid var(--border)">
+        <td style="padding:7px 12px;padding-left:32px">${dirtyMark}${esc(r.label)}</td>
+        <td style="padding:5px 8px;text-align:center">${planHint}</td>
+        <td style="padding:5px 8px;text-align:center">
+          <input type="date" data-fld="start" value="${isoStart}" onchange="onFactChange(${i},'start',isoToRus(this.value))"
+                 style="width:100%;padding:5px 8px;border:0.5px solid var(--border-med);border-radius:4px;font-size:12px;text-align:center;font-family:inherit">
+        </td>
+        <td style="padding:5px 8px;text-align:center">
+          <input type="number" data-fld="duration" min="0" value="${r.duration ?? ''}" onchange="onFactChange(${i},'duration',this.value)"
+                 style="width:100%;padding:5px 8px;border:0.5px solid var(--border-med);border-radius:4px;font-size:12px;text-align:center;font-family:inherit">
+        </td>
+        <td style="padding:5px 8px;text-align:center">
+          <input type="date" data-fld="end" value="${isoEnd}" onchange="onFactChange(${i},'end',isoToRus(this.value))"
+                 style="width:100%;padding:5px 8px;border:0.5px solid var(--border-med);border-radius:4px;font-size:12px;text-align:center;font-family:inherit">
+        </td>
+        <td style="padding:5px 8px;text-align:center">
+          <button onclick="factFromPrev(${i})" title="Старт = конец предыдущей"
+                  style="padding:4px 6px;background:transparent;border:0.5px solid var(--border-med);border-radius:4px;cursor:pointer;font-size:11px">↩</button>
+        </td>
+      </tr>`;
+    });
+  });
+
+  html += `</tbody></table></div>`;
+  wrap.innerHTML = html;
+}
+
+function toggleFactGroup(name) {
+  if (!factState.collapsed) factState.collapsed = {};
+  factState.collapsed[name] = !factState.collapsed[name];
+  renderFactTable();
+}
+
+function onFactChange(idx, field, value) {
+  const r = factState.rows[idx];
+  if (!r) return;
+
+  if (field === 'start') {
+    r.startFact = value.trim();
+    if (r.duration !== null && r.duration !== '' && parsePlanDate(r.startFact)) {
+      const d = parsePlanDate(r.startFact);
+      d.setDate(d.getDate() + Number(r.duration));
+      r.endFact = fmtPlanDate(d);
+    } else {
+      r.duration = calcDuration(r.startFact, r.endFact);
+    }
+  } else if (field === 'end') {
+    r.endFact = value.trim();
+    r.duration = calcDuration(r.startFact, r.endFact);
+  } else if (field === 'duration') {
+    r.duration = value === '' ? null : Number(value);
+    if (r.duration !== null && parsePlanDate(r.startFact)) {
+      const d = parsePlanDate(r.startFact);
+      d.setDate(d.getDate() + r.duration);
+      r.endFact = fmtPlanDate(d);
+    }
+  }
+
+  r.dirty = (r.startFact !== r.origStart || r.endFact !== r.origEnd);
+  r.changedStart = (r.startFact !== r.origStart);
+  r.changedEnd   = (r.endFact   !== r.origEnd);
+  updateFactRowInputs(idx);
+  updateFactDirtyInfo();
+}
+
+function updateFactRowInputs(idx) {
+  const r = factState.rows[idx];
+  if (!r) return;
+  const tr = document.querySelector(`tr[data-fact-row="${idx}"]`);
+  if (!tr) return;
+
+  const startInput = tr.querySelector('input[data-fld="start"]');
+  const endInput   = tr.querySelector('input[data-fld="end"]');
+  const durInput   = tr.querySelector('input[data-fld="duration"]');
+
+  if (startInput && document.activeElement !== startInput) startInput.value = rusToIso(r.startFact);
+  if (endInput   && document.activeElement !== endInput)   endInput.value   = rusToIso(r.endFact);
+  if (durInput   && document.activeElement !== durInput)   durInput.value   = r.duration ?? '';
+
+  const labelCell = tr.querySelector('td:first-child');
+  if (labelCell) {
+    const has = labelCell.querySelector('.fact-dirty-dot');
+    if (r.dirty && !has) {
+      const dot = document.createElement('span');
+      dot.className = 'fact-dirty-dot';
+      dot.style.cssText = 'color:#f59e0b;margin-right:4px';
+      dot.textContent = '●';
+      labelCell.insertBefore(dot, labelCell.firstChild);
+    } else if (!r.dirty && has) {
+      has.remove();
+    }
+  }
+}
+
+function factFromPrev(idx) {
+  if (idx === 0) return;
+  const prev = factState.rows[idx - 1];
+  if (!prev.endFact) {
+    alert('У предыдущей операции не задан конец факта');
+    return;
+  }
+  onFactChange(idx, 'start', prev.endFact);
+}
+
+function updateFactDirtyInfo() {
+  const dirty = factState.rows.filter(r => r.dirty).length;
+  const el = document.getElementById('fact-dirty-info');
+  if (el) el.textContent = dirty > 0 ? `Изменено: ${dirty} оп.` : 'Изменений нет';
+  const btn = document.getElementById('fact-save');
+  if (btn) btn.disabled = dirty === 0;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Проверка конфликтов перед записью.
+// Перечитывает свежие данные из листа и сравнивает с origStart/origEnd,
+// которые мы зафиксировали при загрузке страницы.
+// Возвращает: { conflicts: [...], freshDetail }
+// conflicts — массив { row, label, kind, mine, theirs } для строк где
+//   в Sheets что-то поменялось с момента загрузки, причём именно в тех
+//   полях, которые мы собираемся писать (dirty).
+// kind: 'startPlan' | 'endPlan' | 'startFact' | 'endFact'
+// ─────────────────────────────────────────────────────────────
+async function checkConflicts(sheet, dirty, mode, unit) {
+  const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(sheet) + '&_=' + Date.now());
+  const fresh = await r.json();
+  const conflicts = [];
+  const startField = mode === 'fact' ? 'startFact' : 'startPlan';
+  const endField   = mode === 'fact' ? 'endFact'   : 'endPlan';
+
+  dirty.forEach(row => {
+    // Найдём ту же строку в свежих данных
+    const freshRow = (fresh.rows || []).find(fr => fr.sourceRow === row.rowNum);
+    if (!freshRow) return;
+    const freshDates = (freshRow.dates && freshRow.dates[unit]) || {};
+    // Проверяем — изменилось ли значение, которое было при загрузке
+    if (row.changedStart && (freshDates[startField] || '') !== (row.origStart || '')) {
+      conflicts.push({
+        row: row.rowNum, label: row.label, kind: startField,
+        mine: row[startField] || '(пусто)',
+        theirs: freshDates[startField] || '(пусто)',
+        original: row.origStart || '(пусто)',
+      });
+    }
+    if (row.changedEnd && (freshDates[endField] || '') !== (row.origEnd || '')) {
+      conflicts.push({
+        row: row.rowNum, label: row.label, kind: endField,
+        mine: row[endField] || '(пусто)',
+        theirs: freshDates[endField] || '(пусто)',
+        original: row.origEnd || '(пусто)',
+      });
+    }
+  });
+
+  return { conflicts, fresh };
+}
+
+function describeConflicts(conflicts) {
+  const fieldNames = {
+    startPlan: 'старт плана', endPlan: 'конец плана',
+    startFact: 'старт факта', endFact: 'конец факта'
+  };
+  return conflicts.slice(0, 5).map(c =>
+    `• "${c.label}" — ${fieldNames[c.kind]}:\n` +
+    `   было: ${c.original}\n` +
+    `   в Sheets уже: ${c.theirs}\n` +
+    `   твоё: ${c.mine}`
+  ).join('\n\n') + (conflicts.length > 5 ? `\n\n…и ещё ${conflicts.length - 5}` : '');
+}
+
+async function saveFact() {
+  const dirty = factState.rows.filter(r => r.dirty);
+  if (!dirty.length) {
+    alert('Нет изменений');
+    return;
+  }
+
+  const sheets = PLAN_AREAS[factState.area];
+  const sheet  = sheets[factState.proj];
+
+  const missingRow = dirty.find(r => !r.rowNum);
+  if (missingRow) {
+    alert('Ошибка: фронт не получил sourceRow от бэка. Обновите utils.gs в GAS.\nОперация без rowNum: ' + missingRow.label);
+    return;
+  }
+
+  // Сначала проверяем конфликты
+  document.getElementById('fact-save').textContent = 'Проверка...';
+  document.getElementById('fact-save').disabled = true;
+  let conflictCheck;
+  try {
+    conflictCheck = await checkConflicts(sheet, dirty, 'fact', factState.unit);
+  } catch(e) {
+    document.getElementById('fact-save').textContent = 'Сохранить факт';
+    document.getElementById('fact-save').disabled = false;
+    alert('Не удалось проверить конфликты: ' + e.message);
+    return;
+  }
+
+  if (conflictCheck.conflicts.length) {
+    const ok = confirm(
+      `⚠ В Google Sheets уже изменили ${conflictCheck.conflicts.length} из ваших ${dirty.length} операций ` +
+      `(возможно, кто-то правил в таблице):\n\n` +
+      describeConflicts(conflictCheck.conflicts) +
+      `\n\n— OK → перезаписать своими значениями\n— Отмена → отменить сохранение и обновить данные`
+    );
+    if (!ok) {
+      document.getElementById('fact-save').textContent = 'Сохранить факт';
+      document.getElementById('fact-save').disabled = false;
+      // Освежим страницу — пусть мастер увидит реальное состояние
+      delete detailCache[sheet];
+      loadFactRows();
+      return;
+    }
+  }
+
+  const updates = dirty.map(r => ({
+    row: r.rowNum,
+    startFact: r.startFact || '',
+    endFact:   r.endFact   || '',
+  }));
+
+  document.getElementById('fact-save').textContent = 'Сохраняем...';
+
+  try {
+    const r = await fetch(GAS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveFact',
+        sheet,
+        unit: factState.unit,
+        updates,
+      }),
+    });
+    const result = await r.json();
+
+    if (result.error) {
+      alert('Ошибка: ' + result.error);
+    } else {
+      alert(`✓ Сохранено ${result.written} ячеек`);
+      dirty.forEach(r => {
+        r.origStart = r.startFact;
+        r.origEnd   = r.endFact;
+        r.changedStart = false;
+        r.changedEnd   = false;
+        r.dirty = false;
+      });
+      markStale();
+      renderFactTable();
+      updateFactDirtyInfo();
+    }
+  } catch(e) {
+    alert('Сетевая ошибка: ' + e.message);
+  } finally {
+    document.getElementById('fact-save').textContent = 'Сохранить факт';
+    document.getElementById('fact-save').disabled = false;
+  }
+}
+</script>
+</body>
+</html>

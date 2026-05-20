@@ -393,7 +393,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v6</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v7</div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -2158,15 +2158,28 @@ function startDateEdit(td, mode) {
     if (ok) {
       lastUndo.snapshot = { sheet, rowNum, unit, field, oldRus: current, newRus: rusDate, isPlan };
       td.dataset.current = rusDate;
-      td.innerHTML = isPlan ? renderPlanBadge(rusDate) : renderFactBadge(rusDate, '');
       markStale();
-      // На мобиле обновляем данные в кэше, чтобы при перерисовке (поиск/возврат)
-      // дата осталась "настоящей", а не бледной из старого кэша
-      patchMobileCache(rowNum, unit, field, rusDate);
+      // Определяем мобильный ли это контекст (кнопка .m-fact-btn) или десктопная ячейка
+      const isMobileCell = td.classList.contains('m-fact-btn');
+      if (isMobileCell) {
+        // На мобиле: обновляем данные в кэше и перерисовываем список целиком —
+        // кнопка получит правильный мобильный вид (без мелькания десктопного бейджа)
+        patchMobileCache(rowNum, unit, field, rusDate);
+        const listEl = document.getElementById('m-op-list');
+        if (listEl) listEl.innerHTML = renderMobileOpList();
+      } else {
+        // Десктоп: обновляем ячейку бейджем на месте
+        td.innerHTML = isPlan ? renderPlanBadge(rusDate) : renderFactBadge(rusDate, '');
+      }
       showToast(`✓ ${isPlan?'План':'Факт'} сохранён: ${rusDate || '(пусто)'}`, 'ok', () => undoLastSave(td));
     } else {
-      td.dataset.current = current;
-      td.innerHTML = isPlan ? renderPlanBadge(current) : renderFactBadge(current, '');
+      const isMobileCell = td.classList.contains('m-fact-btn');
+      if (isMobileCell) {
+        const listEl = document.getElementById('m-op-list');
+        if (listEl) listEl.innerHTML = renderMobileOpList();
+      } else {
+        td.innerHTML = isPlan ? renderPlanBadge(current) : renderFactBadge(current, '');
+      }
     }
   };
 

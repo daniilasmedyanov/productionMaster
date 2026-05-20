@@ -393,7 +393,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v5-поиск</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v6</div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -480,6 +480,8 @@ function openArea(area) {
   currentProj[area] = currentProj[area] || 't8';
   document.getElementById('master-bar').style.display = 'block';
   document.getElementById('master-area-name').textContent = AREA_LABELS[area] || area;
+  // Сразу затираем picker лоадером, чтобы не было видно "picker + плашка" одновременно
+  document.getElementById('content').innerHTML = renderBigLoader('Загружаем участок', AREA_LABELS[area] || area);
   // грузим участок
   if (!summaryData) { loadSummaryThenArea(area); }
   else renderTab();
@@ -650,6 +652,18 @@ function clearMobileSearch() {
   renderMobileOps(_mobileCtx.detail, _mobileCtx.unit);
 }
 
+// Обновляет значение факта прямо в данных (кэше) после сохранения,
+// чтобы не перечитывать весь участок с бэка, но при этом дата осталась "настоящей".
+function patchMobileCache(rowNum, unit, field, rusDate) {
+  if (!_mobileCtx || !_mobileCtx.detail) return;
+  const detail = _mobileCtx.detail;
+  const row = (detail.rows || []).find(r => r.sourceRow === rowNum);
+  if (!row || !row.dates || !row.dates[unit]) return;
+  // field: 'startFact' | 'endFact' | 'fact'
+  row.dates[unit][field] = rusDate;
+  // detailCache указывает на тот же объект detail, так что он тоже обновится автоматически
+}
+
 function renderMobileDates(d, se, pf, sheet, sr, unit) {
   // Нормализуем значение факта к единому виду:
   // - дата (22.05.2026) → показываем дату
@@ -667,12 +681,9 @@ function renderMobileDates(d, se, pf, sheet, sr, unit) {
   const factBtn = (field, val, planVal, label) => {
     const shown = normFact(val);
     const has = !!shown;
-    // ВРЕМЕННАЯ ДИАГНОСТИКА — показываем что реально пришло
-    const diag = `<div style="font-size:9px;color:#c00;font-family:monospace;word-break:break-all">[${field}]="${val===undefined?'undef':val===null?'null':val===''?'пусто':val}" has=${has}</div>`;
     return `<div class="m-date-col">
       <div class="m-date-label">${label}</div>
       <div class="m-plan-val">${planVal ? 'план: '+esc(planVal) : '—'}</div>
-      ${diag}
       <button class="m-fact-btn ${has?'filled':''}"
         data-sheet="${esc(sheet)}" data-row="${sr}" data-unit="${esc(unit)}" data-field="${field}" data-current="${esc(val||'')}"
         onclick="startFactEdit(this)">${has ? esc(shown) : 'отметить'}</button>
@@ -2149,6 +2160,9 @@ function startDateEdit(td, mode) {
       td.dataset.current = rusDate;
       td.innerHTML = isPlan ? renderPlanBadge(rusDate) : renderFactBadge(rusDate, '');
       markStale();
+      // На мобиле обновляем данные в кэше, чтобы при перерисовке (поиск/возврат)
+      // дата осталась "настоящей", а не бледной из старого кэша
+      patchMobileCache(rowNum, unit, field, rusDate);
       showToast(`✓ ${isPlan?'План':'Факт'} сохранён: ${rusDate || '(пусто)'}`, 'ok', () => undoLastSave(td));
     } else {
       td.dataset.current = current;

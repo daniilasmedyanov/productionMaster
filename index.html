@@ -343,6 +343,19 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
   padding:6px 0 12px; cursor:pointer;
 }
 .m-unit-header { font-size:22px; font-weight:800; margin-bottom:16px; letter-spacing:-.5px; }
+.m-search-wrap { position:relative; margin-bottom:18px; }
+.m-search {
+  width:100%; padding:13px 38px 13px 14px; border:1px solid var(--border-med);
+  border-radius:10px; font-size:15px; font-family:inherit; background:var(--surface);
+  -webkit-appearance:none;
+}
+.m-search:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(29,78,216,0.1); }
+.m-search-clear {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  width:26px; height:26px; border:none; background:var(--surface2); border-radius:50%;
+  cursor:pointer; font-size:13px; color:var(--text-sec); display:flex; align-items:center; justify-content:center;
+}
+.m-empty { text-align:center; padding:40px 20px; color:var(--text-hint); font-size:14px; }
 .m-group {
   font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
   color:var(--text-hint); margin:20px 2px 8px; padding-bottom:6px; border-bottom:1px solid var(--border);
@@ -380,7 +393,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v3</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v5-поиск</div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -550,13 +563,24 @@ function mSwitchProj(proj) {
   else renderTab();
 }
 function mSelectUnit(u) { mobileUnit = u; renderTab(); }
-function mBackToUnits() { mobileUnit = null; renderTab(); }
+function mBackToUnits() { mobileUnit = null; mobileSearch = ''; renderTab(); }
 
-function renderMobileOps(detail, unit) {
+let mobileSearch = '';
+function onMobileSearch(val) {
+  mobileSearch = val;
+  // Перерисовываем только список, не трогая поле ввода (чтобы фокус не слетал)
+  const listEl = document.getElementById('m-op-list');
+  if (listEl) listEl.innerHTML = renderMobileOpList();
+}
+
+// Текущий контекст для перерисовки списка
+let _mobileCtx = null;
+
+function renderMobileOpList() {
+  if (!_mobileCtx) return '';
+  const { detail, unit, se, pf, sheet } = _mobileCtx;
   const rows = detail.rows || [];
-  const se   = detail.hasStartEnd;
-  const pf   = detail.hasPlanFact;
-  const sheet = TAB_SHEETS[currentTab][currentProj[currentTab]||'t8'];
+  const q = mobileSearch.trim().toLowerCase();
 
   // Группируем по посту (или узлу)
   const groupMap = new Map();
@@ -566,13 +590,20 @@ function renderMobileOps(detail, unit) {
     groupMap.get(g).push(r);
   });
 
-  let html = `<div class="m-wrap">
-    <button class="m-back" onclick="mBackToUnits()">← Все машины</button>
-    <div class="m-unit-header">${esc(unit)}</div>`;
-
+  let html = '';
+  let totalShown = 0;
   groupMap.forEach((grpRows, groupName) => {
+    const groupMatches = q && displayPost(groupName).toLowerCase().includes(q);
+    // Если группа подходит под запрос — показываем все её операции.
+    // Иначе фильтруем операции по названию.
+    const visibleRows = q
+      ? (groupMatches ? grpRows : grpRows.filter(r => (r.label||'').toLowerCase().includes(q)))
+      : grpRows;
+    if (!visibleRows.length) return;
+    totalShown += visibleRows.length;
+
     html += `<div class="m-group">${esc(displayPost(groupName))}</div>`;
-    grpRows.forEach(row => {
+    visibleRows.forEach(row => {
       const d = (row.dates && row.dates[unit]) || {};
       const sr = row.sourceRow || '';
       html += `<div class="m-op">
@@ -582,8 +613,41 @@ function renderMobileOps(detail, unit) {
     });
   });
 
-  html += `</div>`;
+  if (q && totalShown === 0) {
+    html = `<div class="m-empty">Ничего не найдено по запросу «${esc(mobileSearch)}»</div>`;
+  }
+  return html;
+}
+
+function renderMobileOps(detail, unit) {
+  const se   = detail.hasStartEnd;
+  const pf   = detail.hasPlanFact;
+  const sheet = TAB_SHEETS[currentTab][currentProj[currentTab]||'t8'];
+
+  // Сохраняем контекст для перерисовки списка при поиске
+  _mobileCtx = { detail, unit, se, pf, sheet };
+
+  const html = `<div class="m-wrap">
+    <button class="m-back" onclick="mBackToUnits()">← Все машины</button>
+    <div class="m-unit-header">${esc(unit)}</div>
+    <div class="m-search-wrap">
+      <input type="text" class="m-search" placeholder="Поиск по операции или посту..."
+        value="${esc(mobileSearch)}" oninput="onMobileSearch(this.value)">
+      ${mobileSearch ? `<button class="m-search-clear" onclick="clearMobileSearch()">✕</button>` : ''}
+    </div>
+    <div id="m-op-list">${renderMobileOpList()}</div>
+  </div>`;
   document.getElementById('content').innerHTML = html;
+  // Возвращаем фокус в поле если был поиск
+  if (mobileSearch) {
+    const inp = document.querySelector('.m-search');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+}
+
+function clearMobileSearch() {
+  mobileSearch = '';
+  renderMobileOps(_mobileCtx.detail, _mobileCtx.unit);
 }
 
 function renderMobileDates(d, se, pf, sheet, sr, unit) {
@@ -603,9 +667,12 @@ function renderMobileDates(d, se, pf, sheet, sr, unit) {
   const factBtn = (field, val, planVal, label) => {
     const shown = normFact(val);
     const has = !!shown;
+    // ВРЕМЕННАЯ ДИАГНОСТИКА — показываем что реально пришло
+    const diag = `<div style="font-size:9px;color:#c00;font-family:monospace;word-break:break-all">[${field}]="${val===undefined?'undef':val===null?'null':val===''?'пусто':val}" has=${has}</div>`;
     return `<div class="m-date-col">
       <div class="m-date-label">${label}</div>
       <div class="m-plan-val">${planVal ? 'план: '+esc(planVal) : '—'}</div>
+      ${diag}
       <button class="m-fact-btn ${has?'filled':''}"
         data-sheet="${esc(sheet)}" data-row="${sr}" data-unit="${esc(unit)}" data-field="${field}" data-current="${esc(val||'')}"
         onclick="startFactEdit(this)">${has ? esc(shown) : 'отметить'}</button>

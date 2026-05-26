@@ -393,7 +393,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v7</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v9</div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -418,7 +418,7 @@ const TAB_SHEETS = {
   svarka:     { t8: 'сварка T8',   s2: 'сварка S2'   },
   sborka:     { t8: 'сборка Т8',   s2: 'сборка S2'   },
   poliuretan: { t8: 'Полиуретан Т8', s2: null         },
-  kuzov:      { t8: 'кузовная Т8',  s2: 'кузовная S2' },
+  kuzov:      { t8: 'Кузовной T8',  s2: 'Кузовной S2' },
 };
 
 const UNITS_T8 = ['Т8-5','Т8-6','Т8-7'];
@@ -439,7 +439,7 @@ window.EDIT_MODE = 'fact';
 
 const AREA_LABELS = {
   formovka:'Формовка', svarka:'Сварка', sborka:'Сборка',
-  poliuretan:'Полиуретан', kuzov:'Кузовная'
+  poliuretan:'Полиуретан', kuzov:'Кузовной'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1011,7 +1011,7 @@ function renderGantt(data) {
 function sheetLabel(s) {
   const map = {
     'формовка Т8':'Форм.','сварка T8':'Свар.','сборка Т8':'Сбор.',
-    'Полиуретан Т8':'Полиур.','кузовная Т8':'Куз.',
+    'Полиуретан Т8':'Полиур.','Кузовной T8':'Куз.',
     'формовка S2':'Форм.','сварка S2':'Свар.','сборка S2':'Сбор.',
   };
   return map[s] || s;
@@ -1199,8 +1199,8 @@ function renderProjectBlock(proj, projData, units) {
   const areas = projData.areas || {};
   const cls   = proj === 'T8' ? 't8' : 's2';
   const tabMap = proj === 'T8'
-    ? { 'Формовка':'формовка Т8','Сварка':'сварка T8','Сборка':'сборка Т8','Полиуретан':'Полиуретан Т8','Кузовная':'кузовная Т8' }
-    : { 'Формовка':'формовка S2','Сварка':'сварка S2','Сборка':'сборка S2','Полиуретан':null,'Кузовная':'кузовная S2' };
+    ? { 'Формовка':'формовка Т8','Сварка':'сварка T8','Сборка':'сборка Т8','Полиуретан':'Полиуретан Т8','Кузовной':'Кузовной T8' }
+    : { 'Формовка':'формовка S2','Сварка':'сварка S2','Сборка':'сборка S2','Полиуретан':null,'Кузовной':'Кузовной S2' };
   let rows = '';
   Object.entries(tabMap).forEach(([label, sheetName]) => {
     if (!sheetName) {
@@ -1215,7 +1215,7 @@ function renderProjectBlock(proj, projData, units) {
     const pcts   = sheet && sheet.progress ? units.map(u => sheet.progress[u] ? sheet.progress[u].pct : 0) : [];
     const pct    = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : null;
     const pctNum = pct !== null ? pct : 0;
-    const tabKey = {'Формовка':'formovka','Сварка':'svarka','Сборка':'sborka','Полиуретан':'poliuretan','Кузовная':'kuzov'}[label];
+    const tabKey = {'Формовка':'formovka','Сварка':'svarka','Сборка':'sborka','Полиуретан':'poliuretan','Кузовной':'kuzov'}[label];
     rows += `<div class="area-row" onclick="goToTab('${tabKey}','${cls}')">
       <span class="area-name">${label} ${proj}</span>
       <div class="area-prog-wrap">
@@ -1239,7 +1239,7 @@ function renderProjectBlock(proj, projData, units) {
 
 function renderDetail(tab, proj) {
   const sheets    = TAB_SHEETS[tab];
-  const tabLabels = { formovka:'Формовка', svarka:'Сварка', sborka:'Сборка', poliuretan:'Полиуретан', kuzov:'Кузовная' };
+  const tabLabels = { formovka:'Формовка', svarka:'Сварка', sborka:'Сборка', poliuretan:'Полиуретан', kuzov:'Кузовной' };
   const tabLabel  = tabLabels[tab] || tab;
   const hasT8 = !!(sheets && sheets.t8);
   const hasS2 = !!(sheets && sheets.s2);
@@ -2430,7 +2430,7 @@ function getDemoData() {
       'сварка T8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
       'сборка Т8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
       'Полиуретан Т8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
-      'кузовная Т8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
+      'Кузовной T8':{progress:{'Т8-5':{pct:0},'Т8-6':{pct:0},'Т8-7':{pct:0}}},
     }},
     s2:{units:UNITS_S2,areas:{
       'формовка S2':{progress:{'S2-5':{pct:2},'S2-1':{pct:2},'S2-2':{pct:2},'S2-3':{pct:2},'S2-4':{pct:2}}},
@@ -2448,7 +2448,7 @@ const PLAN_AREAS = {
   svarka:     { t8: 'сварка T8',   s2: 'сварка S2'   },
   sborka:     { t8: 'сборка Т8',   s2: 'сборка S2'   },
   poliuretan: { t8: 'Полиуретан Т8', s2: null         },
-  kuzov:      { t8: 'кузовная Т8',  s2: 'кузовная S2' },
+  kuzov:      { t8: 'Кузовной T8',  s2: 'Кузовной S2' },
 };
 
 let planState = {
@@ -2476,7 +2476,7 @@ function renderPlanPage() {
           <option value="svarka">Сварка</option>
           <option value="sborka">Сборка</option>
           <option value="poliuretan">Полиуретан</option>
-          <option value="kuzov">Кузовная</option>
+          <option value="kuzov">Кузовной</option>
         </select>
       </div>
       <div>
@@ -2921,7 +2921,7 @@ function renderFactPage() {
           <option value="svarka">Сварка</option>
           <option value="sborka">Сборка</option>
           <option value="poliuretan">Полиуретан</option>
-          <option value="kuzov">Кузовная</option>
+          <option value="kuzov">Кузовной</option>
         </select>
       </div>
       <div>

@@ -393,7 +393,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v9</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v11</div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -1139,14 +1139,23 @@ function renderSvodkaGantt(data) {
     const devHtml = dev!==null&&dev!==undefined
       ? `<span style="font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;background:${dev>0?'#fee2e2':dev<0?'#dcfce7':'#dcfce7'};color:${dev>0?'#991b1b':dev<0?'#166534':'#166534'}">${dev>0?'+':''}${dev}д</span>` : '';
 
-    // % готовности — считаем по факту от плана
-    const dSP=parseD(r.startPlan), dEP=parseD(r.endPlan), dEF=parseD(r.endFact)||today;
+    // % готовности по машине = (операций с фактом конца) / (операций с планом конца) × 100.
+    // Считаем штуки операций, а не доли времени. Источник — calcProgress на бэке.
     let pct = 0;
-    if (dSP&&dEP) {
-      const planLen = Math.max(1,(dEP-dSP)/86400000);
-      const done    = Math.min(dEF,dEP);
-      pct = Math.round(Math.max(0,Math.min(100,(done-dSP)/86400000/planLen*100)));
+    let totalOps = 0, filledOps = 0;
+    if (summaryData) {
+      const projAreas = (UNITS_T8.includes(unit) ? summaryData.t8 : summaryData.s2);
+      if (projAreas && projAreas.areas) {
+        Object.values(projAreas.areas).forEach(area => {
+          const p = area && area.progress && area.progress[unit];
+          if (p) {
+            totalOps  += (p.total  || 0);
+            filledOps += (p.filled || 0);
+          }
+        });
+      }
     }
+    if (totalOps > 0) pct = Math.round(filledOps / totalOps * 100);
 
     const row = `<div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border)" onmouseenter="this.style.background='#fafaf9'" onmouseleave="this.style.background=''">
       <!-- Левая колонка -->

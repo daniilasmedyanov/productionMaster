@@ -393,7 +393,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v11</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v14</div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -1065,7 +1065,25 @@ function renderSvodkaGantt(data) {
       totalOps += p.opCount||0;
     });
     if (!sp && !ep && !sf && !ef) return; // пропускаем машины без данных
-    const dev = (() => { const dp=parseD(ep),df=parseD(ef); if(!dp||!df)return null; return Math.round((df-dp)/86400000); })();
+    // Отклонение только когда машина закрыта целиком
+    let fullDone = false;
+    if (summaryData) {
+      const projAreas = (UNITS_T8.includes(unit) ? summaryData.t8 : summaryData.s2);
+      if (projAreas && projAreas.areas) {
+        let total=0, filled=0;
+        Object.values(projAreas.areas).forEach(area => {
+          const p = area && area.progress && area.progress[unit];
+          if (p) { total += (p.total||0); filled += (p.filled||0); }
+        });
+        fullDone = total > 0 && filled >= total;
+      }
+    }
+    const dev = (() => {
+      if (!fullDone) return null;
+      const dp=parseD(ep),df=parseD(ef);
+      if(!dp||!df) return null;
+      return Math.round((df-dp)/86400000);
+    })();
     unitRanges[unit] = { startPlan:sp, endPlan:ep, startFact:sf, endFact:ef, dev, totalOps };
   });
 
@@ -1378,9 +1396,16 @@ function renderDetail(tab, proj) {
       const fw=hasFact?Math.max(1,efP-sfP):0;
       const todayLine=todayPctD!==null?`<div style="position:absolute;left:${todayPctD}%;top:0;bottom:0;width:2px;background:#ef4444;opacity:.4;z-index:5"></div>`:'';
 
-      // Отклонение
+      // Отклонение — только когда у машины на этом листе все операции закрыты
+      let allDoneArea = false;
+      if (summaryData) {
+        const projAreas = (proj==='t8' ? summaryData.t8 : summaryData.s2);
+        const areaKey = TAB_SHEETS[currentTab] && TAB_SHEETS[currentTab][proj];
+        const p = projAreas && projAreas.areas && projAreas.areas[areaKey] && projAreas.areas[areaKey].progress && projAreas.areas[areaKey].progress[u];
+        allDoneArea = p && p.total > 0 && p.filled >= p.total;
+      }
       const dp=parseDP(r.ep), df=parseDP(r.ef);
-      const dev = (dp&&df) ? Math.round((df-dp)/86400000) : null;
+      const dev = (allDoneArea && dp && df) ? Math.round((df-dp)/86400000) : null;
       const devHtml = dev!==null ? `<span style="font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;background:${dev>0?'#fee2e2':dev<0?'#dcfce7':'#f0fdf4'};color:${dev>0?'#dc2626':dev<0?'#16a34a':'#16a34a'};margin-left:4px">${dev>0?'+':''}${dev}д</span>` : '';
 
       return `<div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border)">
@@ -1507,8 +1532,22 @@ function renderDetail(tab, proj) {
         const spP=toPctG(r.sp),epP=toPctG(r.ep),sfP=toPctG(r.sf),efP=toPctG(r.ef);
         const hasPlan=spP!==null&&epP!==null, hasFact=sfP!==null&&efP!==null;
         const pw=hasPlan?Math.max(0.5,epP-spP):0, fw=hasFact?Math.max(0.5,efP-sfP):0;
+
+        // Машина полностью закрыта когда factов столько же сколько плановых операций
+        let fullDone = false;
+        if (summaryData) {
+          const projAreas = (isT8 ? summaryData.t8 : summaryData.s2);
+          if (projAreas && projAreas.areas) {
+            let total=0, filled=0;
+            Object.values(projAreas.areas).forEach(area => {
+              const p = area && area.progress && area.progress[u];
+              if (p) { total += (p.total||0); filled += (p.filled||0); }
+            });
+            fullDone = total > 0 && filled >= total;
+          }
+        }
         const dp=parseDP(r.ep),df=parseDP(r.ef);
-        const dev=dp&&df?Math.round((df-dp)/86400000):null;
+        const dev = (fullDone && dp && df) ? Math.round((df-dp)/86400000) : null;
         const devHtml=dev!==null?` <span style="font-size:10px;font-weight:700;padding:1px 4px;border-radius:3px;background:${dev>0?'#fee2e2':'#dcfce7'};color:${dev>0?'#dc2626':'#16a34a'}">${dev>0?'+':''}${dev}д</span>`:'';
         return `<div style="display:flex;align-items:stretch;border-bottom:0.5px solid var(--border)" onmouseenter="this.style.background='#fafaf9'" onmouseleave="this.style.background=''">
           <div style="width:${LWG}px;min-width:${LWG}px;padding:8px 12px;border-right:0.5px solid var(--border-med);display:flex;flex-direction:column;justify-content:center;gap:3px">
@@ -1655,8 +1694,9 @@ function renderDetail(tab, proj) {
           });
         }
 
-        // Отклонение по конечной дате
+        // Отклонение по конечной дате — только когда вся группа закрыта.
         const dev = (() => {
+          if (!allDone) return null;
           if (!endPlanAgg || !endFactAgg) return null;
           const dp = parseDate(endPlanAgg), df = parseDate(endFactAgg);
           if (!dp || !df) return null;

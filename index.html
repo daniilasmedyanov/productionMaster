@@ -197,6 +197,15 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 .group-toggle { display:flex; gap:4px; }
 .group-btn { padding:3px 10px; border-radius:4px; font-size:11.5px; font-weight:500; cursor:pointer; border:0.5px solid var(--border-med); background:var(--surface2); color:var(--text-sec); transition:all .1s; }
 .group-btn.active { background:var(--text); color:#fff; border-color:var(--text); }
+.date-filter { display:flex; gap:4px; align-items:center; flex-wrap:wrap; padding-left:8px; border-left:1px solid var(--border-med); margin-left:4px; }
+.date-chip { padding:3px 9px; border-radius:4px; font-size:11.5px; font-weight:500; cursor:pointer; border:0.5px solid var(--border-med); background:var(--surface2); color:var(--text-sec); transition:all .1s; white-space:nowrap; font-family:inherit; }
+.date-chip:hover { background:var(--border-med); color:var(--text); }
+.date-chip.active { background:var(--text); color:#fff; border-color:var(--text); }
+.date-chip.active.overdue { background:#dc2626; border-color:#dc2626; }
+.date-input { padding:3px 6px; border-radius:4px; font-size:11.5px; border:0.5px solid var(--border-med); background:var(--surface); font-family:inherit; color:var(--text); }
+.filter-counter { font-size:11px; color:var(--blue); background:var(--blue-bg); padding:2px 8px; border-radius:4px; font-weight:500; margin-left:6px; display:inline-block; }
+.col-date.in-period { background:#dcdcdb !important; }
+.col-date.in-period:hover { background:#c8c8c7 !important; }
 .post-header-row td { background:#f0f0ef; font-size:11.5px; font-weight:600; color:var(--text-sec); padding:6px 12px; border-bottom:0.5px solid var(--border-med); border-top:1.5px solid var(--border-med); }
 .badge-post-group { display:inline-block; background:#e0e7ff; color:#3730a3; border-radius:4px; padding:2px 8px; font-size:11.5px; font-weight:600; margin-right:6px; }
 .badge-fact { display:inline-block; background:var(--green-bg); color:var(--green); padding:2px 7px; border-radius:4px; font-size:11px; font-weight:500; white-space:nowrap; max-width:72px; overflow:hidden; text-overflow:ellipsis; }
@@ -393,7 +402,10 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backg
 </head>
 <body>
 
-<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v14</div>
+<div id="version-badge" style="position:fixed;bottom:8px;left:8px;z-index:9999;font-size:10px;color:#fff;background:rgba(0,0,0,0.5);padding:2px 7px;border-radius:10px;font-family:monospace;pointer-events:none">v16</div>
+
+<!-- Плавающий индикатор префетча, виден и на picker'е и в area -->
+<div id="prefetch-status" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:var(--text-hint);background:rgba(255,255,255,0.92);padding:5px 11px;border-radius:6px;border:0.5px solid var(--border-med);display:none;z-index:9998;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.06)"></div>
 
 <div class="master-bar" id="master-bar" style="display:none">
   <div style="display:flex;align-items:center;gap:14px;padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border-med)">
@@ -431,6 +443,16 @@ let currentTab  = 'svodka';
 let currentProj = {};
 let currentGroupMode  = {};
 let currentGanttUnit  = 'Т8-5';
+// Фильтр по дате (как в dashboard)
+// mode: 'all'|'week'|'month'|'nextMonth'|'overdue'|'custom'
+let currentDateFilter = { mode: 'all', from: null, to: null };
+
+// Префетч detail-листов в фоне пока мастер сидит на picker'е (или сразу после).
+// Делает клики по участкам моментальными. Выключи если GAS уходит в лимиты.
+const PREFETCH_DETAILS = true;
+const PREFETCH_DELAY_MS = 500;
+let prefetchStarted = false;
+let prefetchState = { done: 0, total: 0 };
 
 // ════════════════════════════════════════════════
 // МАСТЕР-РЕЖИМ: только факт, один участок
@@ -451,6 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     renderPicker();
   }
+  // Тихо подкачиваем все detail-листы в фоне — пока мастер думает над picker'ом,
+  // данные уже в кэше и клик откроется мгновенно
+  if (PREFETCH_DETAILS) setTimeout(prefetchAllDetails, 500);
 });
 
 let screen = 'picker'; // 'picker' | 'area' — где мы сейчас
@@ -488,14 +513,80 @@ function openArea(area) {
 }
 
 async function loadSummaryThenArea(area) {
-  // summary нужен для мини-прогресса в шапке detail; грузим тихо
-  try {
-    const r = await fetch(GAS + '?action=summary&_=' + Date.now());
-    summaryData = await r.json();
-  } catch(e) { summaryData = { t8:{areas:{}}, s2:{areas:{}} }; }
+  // summary нужен для мини-прогресса в шапке detail; грузим тихо.
+  // Если префетч уже подтянул — пропускаем fetch.
+  if (!summaryData) {
+    try {
+      const r = await fetch(GAS + '?action=summary&_=' + Date.now());
+      summaryData = await r.json();
+    } catch(e) { summaryData = { t8:{areas:{}}, s2:{areas:{}} }; }
+  }
   // Если за время загрузки пользователь вернулся на picker — не рисуем участок
   if (screen !== 'area') return;
   renderTab();
+}
+
+// ─── ПРЕФЕТЧ DETAIL-ЛИСТОВ В ФОНЕ ──────────────────────
+// Цель: пока мастер на picker'е, тихо подкачать summary + все 8 detail-листов.
+// Клик по любому участку откроется мгновенно из кэша.
+async function prefetchAllDetails() {
+  if (prefetchStarted || !PREFETCH_DETAILS) return;
+  prefetchStarted = true;
+
+  // Сначала summary (нужен для мини-прогресса в шапке detail)
+  if (!summaryData) {
+    try {
+      const r = await fetch(GAS + '?action=summary&_=' + Date.now());
+      summaryData = await r.json();
+    } catch(e) { /* тихо */ }
+    await new Promise(res => setTimeout(res, PREFETCH_DELAY_MS));
+  }
+
+  // Затем все уникальные detail-листы
+  const sheets = [];
+  Object.values(TAB_SHEETS).forEach(s => {
+    if (s.t8 && !sheets.includes(s.t8)) sheets.push(s.t8);
+    if (s.s2 && !sheets.includes(s.s2)) sheets.push(s.s2);
+  });
+
+  prefetchState.total = sheets.length;
+  prefetchState.done = 0;
+  updatePrefetchIndicator();
+
+  for (const sheetName of sheets) {
+    if (detailCache[sheetName]) {
+      prefetchState.done++;
+      updatePrefetchIndicator();
+      continue;
+    }
+    try {
+      const r = await fetch(GAS + '?action=detail&sheet=' + encodeURIComponent(sheetName) + '&_=' + Date.now());
+      detailCache[sheetName] = await r.json();
+    } catch(e) {
+      // тихо — если мастер сам кликнет на этот участок, увидит ошибку как обычно
+    }
+    prefetchState.done++;
+    updatePrefetchIndicator();
+    await new Promise(res => setTimeout(res, PREFETCH_DELAY_MS));
+  }
+
+  setTimeout(() => { prefetchState.total = 0; updatePrefetchIndicator(); }, 1500);
+}
+
+function updatePrefetchIndicator() {
+  const el = document.getElementById('prefetch-status');
+  if (!el) return;
+  if (prefetchState.total === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'inline-block';
+  if (prefetchState.done >= prefetchState.total) {
+    el.textContent = `✓ участки готовы (${prefetchState.total})`;
+    el.style.color = 'var(--green)';
+    el.style.borderColor = 'var(--green-bg)';
+  } else {
+    el.textContent = `подкачиваю участки: ${prefetchState.done}/${prefetchState.total}`;
+    el.style.color = 'var(--text-hint)';
+    el.style.borderColor = 'var(--border-med)';
+  }
 }
 
 function backToPicker() {
@@ -1274,23 +1365,45 @@ function renderDetail(tab, proj) {
   const sheetName = sheets && sheets[proj];
   const detail    = sheetName && detailCache[sheetName];
   const hasPostData = detail && detail.rows && detail.rows.some(r => r.post);
-  let switcher = `<div style="display:flex;align-items:center;gap:10px"><div class="proj-switcher">`;
-  if (hasT8) switcher += `<button class="proj-btn ${proj==='t8'?'active t8':''}" onclick="switchProj('${tab}','t8')">T8</button>`;
-  if (hasS2) switcher += `<button class="proj-btn ${proj==='s2'?'active s2':''}" onclick="switchProj('${tab}','s2')">S2</button>`;
-  switcher += `</div><div class="group-toggle">
+
+  // Фильтр по дате — считаем заранее чтобы показать счётчик в шапке
+  const _filterUnits = (detail && detail.units) || [];
+  const rowsAll      = (detail && detail.rows) || [];
+  const rowsFiltered = currentDateFilter.mode === 'all'
+    ? rowsAll
+    : rowsAll.filter(r => rowMatchesDateFilter(r, _filterUnits));
+  const isFiltered = rowsAll.length > 0 && rowsFiltered.length !== rowsAll.length;
+
+  let switcher = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">`;
+  if (groupMode !== 'gantt') {
+    switcher += `<div class="proj-switcher">`;
+    if (hasT8) switcher += `<button class="proj-btn ${proj==='t8'?'active t8':''}" onclick="switchProj('${tab}','t8')">T8</button>`;
+    if (hasS2) switcher += `<button class="proj-btn ${proj==='s2'?'active s2':''}" onclick="switchProj('${tab}','s2')">S2</button>`;
+    switcher += `</div>`;
+  }
+  switcher += `<div class="group-toggle">
     <button class="group-btn ${groupMode==='node'?'active':''}" onclick="switchGroup('${tab}','node')">По узлам</button>
     ${hasPostData ? `<button class="group-btn ${groupMode==='post'?'active':''}" onclick="switchGroup('${tab}','post')">По постам</button>` : ''}
     <button class="group-btn ${groupMode==='gantt'?'active':''}" onclick="switchGroup('${tab}','gantt')">Гант</button>
-  </div></div>`;
+  </div>${groupMode !== 'gantt' ? buildDateFilterChips() : ''}</div>`;
+
+  const subSheetLabel = (groupMode === 'gantt' && hasT8 && hasS2) ? 'T8 + S2' : (sheetName || '—');
+
   let html = `<div class="detail-wrap">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:14px;flex-wrap:wrap">
       <div><div class="detail-title">${tabLabel}</div>
-      <div class="detail-sub">${sheetName||'—'}${detail ? ` · ${detail.totalRows} операций · ${detail.filledRows} заполнено` : ''}</div></div>
+      <div class="detail-sub">${subSheetLabel}${detail && groupMode !== 'gantt' ? ` · ${detail.totalRows} операций · ${detail.filledRows} заполнено` : ''}${isFiltered && groupMode !== 'gantt' ? `<span class="filter-counter">${rowsFiltered.length} в фильтре</span>` : ''}</div></div>
       ${switcher}
     </div>`;
   if (!sheetName) { html += `<div class="state-msg">Нет листа для ${proj.toUpperCase()}</div></div>`; return html; }
   if (!detail)    { html += `<div class="big-loading"><span class="loader"></span><div class="big-loading-text">Загрузка...</div></div></div>`; return html; }
   if (detail.error) { html += `<div class="state-msg" style="color:var(--red)">${detail.error}</div></div>`; return html; }
+
+  // Пустое состояние фильтра
+  if (!rowsFiltered.length && currentDateFilter.mode !== 'all') {
+    html += `<div class="state-msg">Под выбранный период ничего не попадает. <button class="date-chip" onclick="setDateFilter('all')" style="margin-left:8px">Сбросить фильтр</button></div></div>`;
+    return html;
+  }
 
   const units   = detail.units || [];
   const chipCls = proj === 't8' ? 't8' : 's2';
@@ -1310,11 +1423,11 @@ function renderDetail(tab, proj) {
   function minDP(a,b){ const da=parseDP(a),db=parseDP(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da<=db?a:b; }
   function maxDP(a,b){ const da=parseDP(a),db=parseDP(b); if(!da&&!db)return''; if(!da)return b; if(!db)return a; return da>=db?a:b; }
 
-  // Собираем min/max дат по каждой единице в этом участке
+  // Собираем min/max дат по каждой единице в этом участке (по отфильтрованным строкам)
   const unitRangesD = {};
   units.forEach(u => {
     let sp='',ep='',sf='',ef='';
-    detail.rows.forEach(row => {
+    rowsFiltered.forEach(row => {
       const d = row.dates && row.dates[u];
       if (!d) return;
       if (detail.hasStartEnd) {
@@ -1455,10 +1568,12 @@ function renderDetail(tab, proj) {
       const det = detailCache[sName];
       if (!det || !det.rows) return;
       const detUnits = det.units || [];
+      // В режиме Гант фильтр игнорируем — плашка скрыта, показываем всё
+      const detRowsFiltered = det.rows;
       detUnits.forEach(u => {
         if (!unitRangesG[u]) unitRangesG[u] = { sp:'',ep:'',sf:'',ef:'' };
         const r = unitRangesG[u];
-        det.rows.forEach(row => {
+        detRowsFiltered.forEach(row => {
           const d = row.dates && row.dates[u];
           if (!d) return;
           if (det.hasStartEnd) {
@@ -1607,7 +1722,7 @@ function renderDetail(tab, proj) {
       'Слесарный пост',
     ];
     const postMap = new Map();
-    detail.rows.forEach(row => {
+    rowsFiltered.forEach(row => {
       const p = row.post || '—';
       if (!postMap.has(p)) postMap.set(p, { num: '', name: p, rows: [], isPost: true });
       postMap.get(p).rows.push(row);
@@ -1621,7 +1736,7 @@ function renderDetail(tab, proj) {
   } else {
     // Группировка по узлу (дефолт)
     // flat=true строки — показываем без группировки, как отдельный элемент
-    detail.rows.forEach(row => {
+    rowsFiltered.forEach(row => {
       if (row.flat) {
         groups.push({ num: row.num || '', name: '', rows: [row], flat: true });
         return;
@@ -1853,14 +1968,18 @@ function renderDetail(tab, proj) {
   function opDateCells(row) {
     const sr = row.sourceRow || '';
     const mode = window.EDIT_MODE || 'plan'; // 'plan' (директор) или 'fact' (мастер)
-    const planCell = (field, val) =>
-      mode === 'plan'
-        ? `class="col-date plan-cell" data-sheet="${esc(sheetName)}" data-row="${sr}" data-unit="UNIT" data-field="${field}" data-current="${esc(val||'')}" ondblclick="startPlanEdit(this)" title="Двойной клик — изменить план"`
-        : `class="col-date"`;
-    const factCell = (field, val) =>
-      mode === 'fact'
-        ? `class="col-date fact-cell" data-sheet="${esc(sheetName)}" data-row="${sr}" data-unit="UNIT" data-field="${field}" data-current="${esc(val||'')}" ondblclick="startFactEdit(this)" title="Двойной клик — отметить факт"`
-        : `class="col-date"`;
+    const planCell = (field, val) => {
+      const inP = dateInRange(val) ? ' in-period' : '';
+      return mode === 'plan'
+        ? `class="col-date plan-cell${inP}" data-sheet="${esc(sheetName)}" data-row="${sr}" data-unit="UNIT" data-field="${field}" data-current="${esc(val||'')}" ondblclick="startPlanEdit(this)" title="Двойной клик — изменить план"`
+        : `class="col-date${inP}"`;
+    };
+    const factCell = (field, val) => {
+      const inP = dateInRange(val) ? ' in-period' : '';
+      return mode === 'fact'
+        ? `class="col-date fact-cell${inP}" data-sheet="${esc(sheetName)}" data-row="${sr}" data-unit="UNIT" data-field="${field}" data-current="${esc(val||'')}" ondblclick="startFactEdit(this)" title="Двойной клик — отметить факт"`
+        : `class="col-date${inP}"`;
+    };
     return se
       ? units.map(u => {
           const d=(row.dates&&row.dates[u])||{};
@@ -1878,29 +1997,37 @@ function renderDetail(tab, proj) {
           return `<td ${planCell('plan', d.plan).replace('UNIT', esc(u))} style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.plan||'')}</td>
                   <td ${factCell('fact', d.fact).replace('UNIT', esc(u))}>${renderFactBadge(d.fact||'',d.plan||'')}</td>`;
         }).join('')
-      : units.map(u=>`<td class="col-date">${renderDateBadge((row.dates&&row.dates[u])||'')}</td>`).join('');
+      : units.map(u=>{
+          const v=(row.dates&&row.dates[u])||'';
+          const inP = dateInRange(typeof v==='string'?v:'') ? ' in-period' : '';
+          return `<td class="col-date${inP}">${renderDateBadge(v)}</td>`;
+        }).join('');
   }
 
   // Хелпер: строки дат для агрегированной группы
   function aggDateCells(agg) {
+    const cls = (v) => `col-date${dateInRange(v)?' in-period':''}`;
     return se
       ? units.map(u => {
           const d=agg.dates[u]||{};
           const dev = d.deviation;
           const devHtml = dev !== null && dev !== undefined
             ? `<span style="font-size:10px;margin-left:3px;color:${dev>0?'var(--red)':dev<0?'var(--green)':'var(--text-hint)'}">${dev>0?'+':''}${dev}д</span>` : '';
-          return `<td class="col-date" style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.startPlan||'')}</td>
-                  <td class="col-date">${renderFactBadge(d.startFact||'',d.startPlan||'')}</td>
-                  <td class="col-date">${renderPlanBadge(d.endPlan||'')}</td>
-                  <td class="col-date">${renderFactBadge(d.endFact||'',d.endPlan||'')}${devHtml}</td>`;
+          return `<td class="${cls(d.startPlan)}" style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.startPlan||'')}</td>
+                  <td class="${cls(d.startFact)}">${renderFactBadge(d.startFact||'',d.startPlan||'')}</td>
+                  <td class="${cls(d.endPlan)}">${renderPlanBadge(d.endPlan||'')}</td>
+                  <td class="${cls(d.endFact)}">${renderFactBadge(d.endFact||'',d.endPlan||'')}${devHtml}</td>`;
         }).join('')
       : pf
       ? units.map(u => {
           const d=agg.dates[u]||{};
-          return `<td class="col-date" style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.plan||'')}</td>
-                  <td class="col-date">${renderFactBadge(d.fact||'',d.plan||'')}</td>`;
+          return `<td class="${cls(d.plan)}" style="border-left:1.5px solid var(--border-med)">${renderPlanBadge(d.plan||'')}</td>
+                  <td class="${cls(d.fact)}">${renderFactBadge(d.fact||'',d.plan||'')}</td>`;
         }).join('')
-      : units.map(u=>`<td class="col-date">${renderDateBadge(agg.dates[u]||'')}</td>`).join('');
+      : units.map(u=>{
+          const v = agg.dates[u]||'';
+          return `<td class="${cls(typeof v==='string'?v:'')}">${renderDateBadge(v)}</td>`;
+        }).join('');
   }
 
   let rowIdx = 0; // глобальный счётчик для уникальных gid
@@ -2650,6 +2777,96 @@ function calcDuration(start, end) {
   const ds = parsePlanDate(start), de = parsePlanDate(end);
   if (!ds || !de) return null;
   return Math.round((de - ds) / 86400000);
+}
+
+// ─── ФИЛЬТР ПО ДАТЕ ──────────────────────────────────────
+function getDateFilterRange() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const m = currentDateFilter.mode;
+  if (m === 'week') {
+    const dow = (today.getDay() + 6) % 7;
+    const mon = new Date(today); mon.setDate(today.getDate() - dow);
+    const sun = new Date(mon);   sun.setDate(mon.getDate() + 6);
+    return { from: mon, to: sun };
+  }
+  if (m === 'month') return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: new Date(today.getFullYear(), today.getMonth()+1, 0) };
+  if (m === 'nextMonth') return { from: new Date(today.getFullYear(), today.getMonth()+1, 1), to: new Date(today.getFullYear(), today.getMonth()+2, 0) };
+  if (m === 'custom' && currentDateFilter.from && currentDateFilter.to) return { from: currentDateFilter.from, to: currentDateFilter.to };
+  return null;
+}
+function rowMatchesDateFilter(row, units) {
+  if (currentDateFilter.mode === 'all') return true;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const getPlanRange = (u) => {
+    const d = row.dates && row.dates[u];
+    if (!d) return null;
+    if (typeof d === 'string') { const v = parsePlanDate(d); return v ? { s:v, e:v } : null; }
+    if (d.startPlan || d.endPlan) {
+      const s = parsePlanDate(d.startPlan), e = parsePlanDate(d.endPlan);
+      if (!s && !e) return null;
+      return { s: s||e, e: e||s };
+    }
+    if (d.plan) { const p = parsePlanDate(d.plan); return p ? { s:p, e:p } : null; }
+    return null;
+  };
+  if (currentDateFilter.mode === 'overdue') {
+    return units.some(u => {
+      const d = row.dates && row.dates[u];
+      if (!d || typeof d === 'string') return false;
+      const ep = parsePlanDate(d.endPlan || d.plan);
+      const ef = d.endFact || d.fact;
+      if (!ep || ef) return false;
+      return ep < today;
+    });
+  }
+  const range = getDateFilterRange();
+  if (!range) return true;
+  return units.some(u => { const r = getPlanRange(u); if (!r) return false; return !(r.e < range.from || r.s > range.to); });
+}
+function setDateFilter(mode) {
+  currentDateFilter.mode = mode;
+  if (mode === 'custom' && (!currentDateFilter.from || !currentDateFilter.to)) {
+    const t = new Date();
+    currentDateFilter.from = new Date(t.getFullYear(), t.getMonth(), 1);
+    currentDateFilter.to   = new Date(t.getFullYear(), t.getMonth()+1, 0);
+  }
+  renderTab();
+}
+function setDateCustom(field, isoValue) {
+  if (!isoValue) return;
+  const [y,m,d] = isoValue.split('-').map(Number);
+  const date = new Date(y, m-1, d);
+  if (field === 'from') currentDateFilter.from = date; else currentDateFilter.to = date;
+  if (currentDateFilter.from && currentDateFilter.to) { currentDateFilter.mode = 'custom'; renderTab(); }
+}
+function _dateFilterToIso(d) {
+  if (!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dateInRange(rusDate) {
+  if (!rusDate) return false;
+  if (currentDateFilter.mode === 'all' || currentDateFilter.mode === 'overdue') return false;
+  const r = getDateFilterRange();
+  if (!r) return false;
+  const d = parsePlanDate(rusDate);
+  if (!d) return false;
+  return d >= r.from && d <= r.to;
+}
+function buildDateFilterChips() {
+  const df = currentDateFilter.mode;
+  return `<div class="date-filter">
+    <button class="date-chip ${df==='all'?'active':''}" onclick="setDateFilter('all')">Всё</button>
+    <button class="date-chip ${df==='week'?'active':''}" onclick="setDateFilter('week')">Неделя</button>
+    <button class="date-chip ${df==='month'?'active':''}" onclick="setDateFilter('month')">Этот месяц</button>
+    <button class="date-chip ${df==='nextMonth'?'active':''}" onclick="setDateFilter('nextMonth')">След. месяц</button>
+    <button class="date-chip ${df==='overdue'?'active overdue':''}" onclick="setDateFilter('overdue')">⚠ Просрочено</button>
+    <button class="date-chip ${df==='custom'?'active':''}" onclick="setDateFilter('custom')" title="Произвольный период">📅</button>
+    ${df==='custom' ? `
+      <input type="date" class="date-input" value="${_dateFilterToIso(currentDateFilter.from)}" onchange="setDateCustom('from',this.value)">
+      <span style="color:var(--text-hint);font-size:11px">→</span>
+      <input type="date" class="date-input" value="${_dateFilterToIso(currentDateFilter.to)}" onchange="setDateCustom('to',this.value)">
+    ` : ''}
+  </div>`;
 }
 
 function parsePlanDate(s) {
